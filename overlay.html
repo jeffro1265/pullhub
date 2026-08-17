@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stream Overlay</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: transparent;
+      font-family: 'Arial Black', sans-serif;
+    }
+
+    .lower-third {
+      position: absolute;
+      bottom: 60px;
+      left: 60px;
+      display: flex;
+      align-items: stretch;
+      background-color: #1a8cff; /* Light Blue */
+      color: #ffffff; /* White Text */
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: translateY(40px);
+      transition: all 0.4s ease-in-out;
+      overflow: hidden;
+    }
+
+    .lower-third.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .info-block {
+      padding: 15px 25px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .driver-name {
+      font-size: 28px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      line-height: 1.1;
+    }
+
+    .meta-info {
+      font-size: 16px;
+      font-weight: normal;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+
+    .distance-block {
+      background-color: #005bb5; /* Darker blue accent for distance */
+      padding: 15px 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border-left: 3px solid #ffffff;
+    }
+
+    .distance-value {
+      font-size: 32px;
+    }
+
+    .distance-label {
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="overlay" class="lower-third">
+    <div class="info-block">
+      <div id="driver" class="driver-name">Driver Name</div>
+      <div class="meta-info">
+        <span id="team">Team Name</span> | <span id="town">Hometown</span>
+      </div>
+    </div>
+    <div class="distance-block">
+      <div id="distance" class="distance-value">000.00</div>
+      <div class="distance-label">Distance</div>
+    </div>
+  </div>
+
+  <script>
+    const overlay = document.getElementById('overlay');
+    const driverEl = document.getElementById('driver');
+    const teamEl = document.getElementById('team');
+    const townEl = document.getElementById('town');
+    const distanceEl = document.getElementById('distance');
+
+    // Continuously check for updates from the control page
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'pullerOverlay') {
+        const data = JSON.parse(event.newValue);
+        if (data && data.active) {
+          driverEl.textContent = data.driver || 'N/A';
+          teamEl.textContent = data.team || 'N/A';
+          townEl.textContent = data.town || 'N/A';
+          distanceEl.textContent = data.distance || '0.00';
+          overlay.classList.add('visible');
+        } else {
+          overlay.classList.remove('visible');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

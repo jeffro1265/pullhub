@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pulling Control Panel</title>
+  <style>
+    body { font-family: sans-serif; background: #1e1e24; color: #fff; padding: 20px; margin: 0; }
+    .container { display: flex; gap: 20px; }
+    .panel { background: #2b2b36; padding: 20px; border-radius: 8px; flex: 1; }
+    h2 { margin-top: 0; border-bottom: 2px solid #3f3f50; padding-bottom: 10px; }
+    textarea { width: 100%; height: 150px; background: #1e1e24; color: #fff; border: 1px solid #444; box-sizing: border-box; }
+    button { background: #0084ff; color: #fff; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+    button:hover { background: #006bce; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+    th { background: #1e1e24; }
+    input[type="text"] { width: 90%; background: transparent; border: none; color: #fff; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .2s; border-radius: 20px; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
+    input:checked + .slider { background-color: #0084ff; }
+    input:checked + .slider:before { transform: translateX(20px); }
+  </style>
+</head>
+<body>
+
+  <h1>Tractor Pull Scorekeeping Control</h1>
+  
+  <div class="container">
+    <!-- Panel 1: Data Input -->
+    <div class="panel">
+      <h2>Panel 1: Import / Entry</h2>
+      <p>Paste Excel/TSV data below (Tab-separated: <strong>Distance | Team Name | Driver Name | Hometown</strong>):</p>
+      <textarea id="tsvImport" placeholder="321.45	Iron Maiden	John Doe	Dallas, TX"></textarea>
+      <button onclick="parseTSV()">Load Table</button>
+    </div>
+
+    <!-- Panel 2: Table & Lower Third Controls -->
+    <div class="panel">
+      <h2>Panel 2: Lower Third Control</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>On Air</th>
+            <th>Distance</th>
+            <th>Team Name</th>
+            <th>Driver Name</th>
+            <th>Hometown</th>
+          </tr>
+        </thead>
+        <tbody id="pullerTable">
+          <!-- Rows generated dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Initialize 20 empty rows on load
+    const tableBody = document.getElementById('pullerTable');
+    
+    function createRow(dist = '', team = '', driver = '', town = '', index = 0) {
+      return `
+        <tr data-index="${index}">
+          <td>
+            <label class="switch">
+              <input type="checkbox" onchange="toggleOverlay(${index})" id="switch-${index}">
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td><input type="text" value="${dist}" onchange="updateData(${index})" id="dist-${index}"></td>
+          <td><input type="text" value="${team}" onchange="updateData(${index})" id="team-${index}"></td>
+          <td><input type="text" value="${driver}" onchange="updateData(${index})" id="driver-${index}"></td>
+          <td><input type="text" value="${town}" onchange="updateData(${index})" id="town-${index}"></td>
+        </tr>
+      `;
+    }
+
+    function initTable() {
+      tableBody.innerHTML = '';
+      for (let i = 0; i < 20; i++) {
+        tableBody.innerHTML += createRow('', '', '', '', i);
+      }
+    }
+
+    function parseTSV() {
+      const raw = document.getElementById('tsvImport').value.trim();
+      if (!raw) return;
+      const rows = raw.split('\n');
+      tableBody.innerHTML = '';
+      
+      const totalRows = Math.max(20, rows.length);
+      for (let i = 0; i < totalRows; i++) {
+        if (rows[i]) {
+          const cols = rows[i].split('\t');
+          tableBody.innerHTML += createRow(cols[0] || '', cols[1] || '', cols[2] || '', cols[3] || '', i);
+        } else {
+          tableBody.innerHTML += createRow('', '', '', '', i);
+        }
+      }
+    }
+
+    function toggleOverlay(activeIndex) {
+      // Turn off all other switches so only one lower third displays at a time
+      for (let i = 0; i < tableBody.children.length; i++) {
+        if (i !== activeIndex) {
+          const sw = document.getElementById(`switch-${i}`);
+          if (sw) sw.checked = false;
+        }
+      }
+
+      const activeSwitch = document.getElementById(`switch-${activeIndex}`);
+      if (activeSwitch.checked) {
+        const payload = {
+          active: true,
+          distance: document.getElementById(`dist-${activeIndex}`).value,
+          team: document.getElementById(`team-${activeIndex}`).value,
+          driver: document.getElementById(`driver-${activeIndex}`).value,
+          town: document.getElementById(`town-${activeIndex}`).value
+        };
+        localStorage.setItem('pullerOverlay', JSON.stringify(payload));
+      } else {
+        localStorage.setItem('pullerOverlay', JSON.stringify({ active: false }));
+      }
+    }
+
+    function updateData(index) {
+      const sw = document.getElementById(`switch-${index}`);
+      if (sw.checked) toggleOverlay(index);
+    }
+
+    initTable();
+  </script>
+</body>
+</html>
