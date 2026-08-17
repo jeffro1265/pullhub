@@ -2,77 +2,214 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pulling Control Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tractor Pull Scorekeeping Control</title>
   <style>
-    body { font-family: sans-serif; background: #1e1e24; color: #fff; padding: 20px; margin: 0; }
-    .container { display: flex; gap: 20px; }
-    .panel { background: #2b2b36; padding: 20px; border-radius: 8px; flex: 1; }
-    h2 { margin-top: 0; border-bottom: 2px solid #3f3f50; padding-bottom: 10px; }
-    textarea { width: 100%; height: 150px; background: #1e1e24; color: #fff; border: 1px solid #444; box-sizing: border-box; }
-    button { background: #0084ff; color: #fff; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: bold; }
-    button:hover { background: #006bce; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #444; padding: 8px; text-align: left; }
-    th { background: #1e1e24; }
-    input[type="text"] { width: 90%; background: transparent; border: none; color: #fff; }
-    .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .2s; border-radius: 20px; }
-    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
-    input:checked + .slider { background-color: #0084ff; }
-    input:checked + .slider:before { transform: translateX(20px); }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #18181c;
+      color: #f0f0f5;
+      padding: 24px;
+      margin: 0;
+    }
+    h1 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 24px;
+      color: #ffffff;
+      border-bottom: 1px solid #33333d;
+      padding-bottom: 12px;
+    }
+    .container {
+      display: flex;
+      gap: 24px;
+    }
+    .panel {
+      background: #23232a;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #33333d;
+      flex: 1;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #1a8cff;
+      border-bottom: 1px solid #33333d;
+      padding-bottom: 10px;
+    }
+    p {
+      font-size: 13px;
+      color: #aaaaee;
+      margin-top: 0;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      background: #141418;
+      color: #00ffcc;
+      border: 1px solid #444452;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 13px;
+      resize: vertical;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #1a8cff;
+    }
+    button {
+      background: #1a8cff;
+      color: #ffffff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #0070e0;
+    }
+    .table-wrapper {
+      max-height: 550px;
+      overflow-y: auto;
+      border: 1px solid #33333d;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid #33333d;
+      padding: 6px 10px;
+      text-align: left;
+    }
+    th {
+      background: #141418;
+      color: #8888a0;
+      font-size: 12px;
+      text-transform: uppercase;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    td input[type="text"] {
+      width: 100%;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      color: #ffffff;
+      padding: 4px 6px;
+      font-size: 13px;
+    }
+    td input[type="text"]:focus {
+      background: #141418;
+      border-color: #1a8cff;
+      outline: none;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #444452;
+      transition: .2s;
+      border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #ffffff;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #1a8cff;
+    }
+    input:checked + .slider:before {
+      transform: translateX(16px);
+    }
   </style>
 </head>
 <body>
 
-  <h1>Tractor Pull Scorekeeping Control</h1>
+  <h1>Tractor Pull Scorekeeping Control Panel</h1>
   
   <div class="container">
-    <!-- Panel 1: Data Input -->
-    <div class="panel">
-      <h2>Panel 1: Import / Entry</h2>
-      <p>Paste Excel/TSV data below (Tab-separated: <strong>Distance | Team Name | Driver Name | Hometown</strong>):</p>
-      <textarea id="tsvImport" placeholder="321.45	Iron Maiden	John Doe	Dallas, TX"></textarea>
-      <button onclick="parseTSV()">Load Table</button>
+    <!-- Panel 1: TSV Input -->
+    <div class="panel" style="max-width: 350px;">
+      <h2>Panel 1: Import Data</h2>
+      <p>Paste Excel / Tab-Separated data below.<br>Columns required: <strong>Distance | Team Name | Driver Name | Hometown</strong></p>
+      <textarea id="tsvImport" placeholder="321.45&#09;Iron Maiden&#09;John Doe&#09;Dallas, TX"></textarea>
+      <button onclick="parseTSV()">Load Into Table</button>
     </div>
 
-    <!-- Panel 2: Table & Lower Third Controls -->
+    <!-- Panel 2: Table & Toggle Switches -->
     <div class="panel">
       <h2>Panel 2: Lower Third Control</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>On Air</th>
-            <th>Distance</th>
-            <th>Team Name</th>
-            <th>Driver Name</th>
-            <th>Hometown</th>
-          </tr>
-        </thead>
-        <tbody id="pullerTable">
-          <!-- Rows generated dynamically -->
-        </tbody>
-      </table>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 60px;">On Air</th>
+              <th>Distance</th>
+              <th>Team Name</th>
+              <th>Driver Name</th>
+              <th>Hometown</th>
+            </tr>
+          </thead>
+          <tbody id="pullerTable">
+            <!-- Rows generated dynamically -->
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
   <script>
-    // Initialize 20 empty rows on load
     const tableBody = document.getElementById('pullerTable');
+    let syncChannel;
     
+    try {
+      syncChannel = new BroadcastChannel('pulling_overlay_channel');
+    } catch(e) {
+      console.warn("BroadcastChannel not supported in this browser, relying on LocalStorage.");
+    }
+
     function createRow(dist = '', team = '', driver = '', town = '', index = 0) {
       return `
         <tr data-index="${index}">
-          <td>
+          <td style="text-align: center;">
             <label class="switch">
               <input type="checkbox" onchange="toggleOverlay(${index})" id="switch-${index}">
               <span class="slider"></span>
             </label>
           </td>
-          <td><input type="text" value="${dist}" onchange="updateData(${index})" id="dist-${index}"></td>
-          <td><input type="text" value="${team}" onchange="updateData(${index})" id="team-${index}"></td>
-          <td><input type="text" value="${driver}" onchange="updateData(${index})" id="driver-${index}"></td>
-          <td><input type="text" value="${town}" onchange="updateData(${index})" id="town-${index}"></td>
+          <td><input type="text" value="${dist}" oninput="updateData(${index})" id="dist-${index}" placeholder="Distance"></td>
+          <td><input type="text" value="${team}" oninput="updateData(${index})" id="team-${index}" placeholder="Team"></td>
+          <td><input type="text" value="${driver}" oninput="updateData(${index})" id="driver-${index}" placeholder="Driver"></td>
+          <td><input type="text" value="${town}" oninput="updateData(${index})" id="town-${index}" placeholder="Hometown"></td>
         </tr>
       `;
     }
@@ -94,15 +231,28 @@
       for (let i = 0; i < totalRows; i++) {
         if (rows[i]) {
           const cols = rows[i].split('\t');
-          tableBody.innerHTML += createRow(cols[0] || '', cols[1] || '', cols[2] || '', cols[3] || '', i);
+          tableBody.innerHTML += createRow(
+            (cols[0] || '').trim(), 
+            (cols[1] || '').trim(), 
+            (cols[2] || '').trim(), 
+            (cols[3] || '').trim(), 
+            i
+          );
         } else {
           tableBody.innerHTML += createRow('', '', '', '', i);
         }
       }
     }
 
+    function broadcastState(payload) {
+      localStorage.setItem('pullerOverlay', JSON.stringify(payload));
+      if (syncChannel) {
+        syncChannel.postMessage(payload);
+      }
+    }
+
     function toggleOverlay(activeIndex) {
-      // Turn off all other switches so only one lower third displays at a time
+      // Turn off all other switches (only 1 on-air lower third at a time)
       for (let i = 0; i < tableBody.children.length; i++) {
         if (i !== activeIndex) {
           const sw = document.getElementById(`switch-${i}`);
@@ -111,23 +261,24 @@
       }
 
       const activeSwitch = document.getElementById(`switch-${activeIndex}`);
-      if (activeSwitch.checked) {
+      if (activeSwitch && activeSwitch.checked) {
         const payload = {
           active: true,
           distance: document.getElementById(`dist-${activeIndex}`).value,
           team: document.getElementById(`team-${activeIndex}`).value,
           driver: document.getElementById(`driver-${activeIndex}`).value,
-          town: document.getElementById(`town-${activeIndex}`).value
+          town: document.getElementById(`town-${activeIndex}`).value,
+          timestamp: Date.now()
         };
-        localStorage.setItem('pullerOverlay', JSON.stringify(payload));
+        broadcastState(payload);
       } else {
-        localStorage.setItem('pullerOverlay', JSON.stringify({ active: false }));
+        broadcastState({ active: false, timestamp: Date.now() });
       }
     }
 
     function updateData(index) {
       const sw = document.getElementById(`switch-${index}`);
-      if (sw.checked) toggleOverlay(index);
+      if (sw && sw.checked) toggleOverlay(index);
     }
 
     initTable();
