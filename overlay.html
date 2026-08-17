@@ -2,98 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stream Overlay</title>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 0;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      background-color: transparent;
-      font-family: 'Arial Black', 'Impact', sans-serif;
-    }
-
-    .lower-third {
-      position: absolute;
-      bottom: 60px;
-      left: 60px;
-      display: flex;
-      align-items: stretch;
-      background-color: #1a8cff; /* Light Blue */
-      color: #ffffff; /* White Text */
-      border-radius: 8px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      opacity: 0;
-      transform: translateY(40px);
-      transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
-      overflow: hidden;
-    }
-
-    .lower-third.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .info-block {
-      padding: 16px 28px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .driver-name {
-      font-size: 30px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      line-height: 1.1;
-      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
-    }
-
-    .meta-info {
-      font-size: 16px;
-      font-weight: normal;
-      font-family: sans-serif;
-      opacity: 0.95;
-      margin-top: 4px;
-    }
-
-    .distance-block {
-      background-color: #005bb5; /* Darker Blue Accent */
-      padding: 16px 32px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      border-left: 3px solid #ffffff;
-    }
-
-    .distance-value {
-      font-size: 34px;
-      line-height: 1;
-      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
-    }
-
-    .distance-label {
-      font-size: 11px;
-      font-family: sans-serif;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      margin-top: 4px;
-      opacity: 0.9;
-    }
+    body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; font-family: 'Arial Black', sans-serif; }
+    .lower-third { position: absolute; bottom: 60px; left: 60px; display: flex; background: #1a8cff; color: #fff; border-radius: 8px; opacity: 0; transform: translateY(40px); transition: all 0.4s ease-in-out; overflow: hidden; }
+    .lower-third.visible { opacity: 1; transform: translateY(0); }
+    .info-block { padding: 16px 28px; display: flex; flex-direction: column; }
+    .driver-name { font-size: 30px; text-transform: uppercase; }
+    .meta-info { font-size: 16px; font-weight: normal; font-family: sans-serif; opacity: 0.9; margin-top: 4px; }
+    .distance-block { background: #005bb5; padding: 16px 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 3px solid #fff; }
+    .distance-value { font-size: 34px; }
+    .distance-label { font-size: 11px; font-family: sans-serif; text-transform: uppercase; }
   </style>
 </head>
 <body>
-
   <div id="overlay" class="lower-third">
     <div class="info-block">
       <div id="driver" class="driver-name">Driver Name</div>
-      <div class="meta-info">
-        <span id="team">Team Name</span> &bull; <span id="town">Hometown</span>
-      </div>
+      <div class="meta-info"><span id="team">Team Name</span> &bull; <span id="town">Hometown</span></div>
     </div>
     <div class="distance-block">
       <div id="distance" class="distance-value">000.00</div>
@@ -102,61 +28,40 @@
   </div>
 
   <script>
+    // Must match the topic string used in index.html
+    const CHANNEL_TOPIC = 'mypullingchannel123';
+    
     const overlay = document.getElementById('overlay');
     const driverEl = document.getElementById('driver');
     const teamEl = document.getElementById('team');
     const townEl = document.getElementById('town');
     const distanceEl = document.getElementById('distance');
-    
-    let lastTimestamp = 0;
 
-    function applyData(data) {
-      if (!data) return;
-      if (data.timestamp && data.timestamp === lastTimestamp) return;
-      if (data.timestamp) lastTimestamp = data.timestamp;
+    function connect() {
+      const eventSource = new EventSource(`https://ntfy.sh/${CHANNEL_TOPIC}/sse`);
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(JSON.parse(event.data).message);
+          if (data.active) {
+            driverEl.textContent = data.driver || 'N/A';
+            teamEl.textContent = data.team || 'N/A';
+            townEl.textContent = data.town || 'N/A';
+            distanceEl.textContent = data.distance || '0.00';
+            overlay.classList.add('visible');
+          } else {
+            overlay.classList.remove('visible');
+          }
+        } catch(e) {}
+      };
 
-      if (data.active) {
-        driverEl.textContent = data.driver || 'N/A';
-        teamEl.textContent = data.team || 'N/A';
-        townEl.textContent = data.town || 'N/A';
-        distanceEl.textContent = data.distance || '0.00';
-        overlay.classList.add('visible');
-      } else {
-        overlay.classList.remove('visible');
-      }
+      eventSource.onerror = () => {
+        eventSource.close();
+        setTimeout(connect, 2000); // Reconnect if disconnected
+      };
     }
 
-    function checkLocalStorage() {
-      try {
-        const raw = localStorage.getItem('pullerOverlay');
-        if (raw) {
-          applyData(JSON.parse(raw));
-        }
-      } catch (e) {
-        console.error("Storage sync read error", e);
-      }
-    }
-
-    // Mechanism 1: BroadcastChannel API (Instant across different tabs/windows)
-    try {
-      const syncChannel = new BroadcastChannel('pulling_overlay_channel');
-      syncChannel.onmessage = (event) => applyData(event.data);
-    } catch(e) {
-      console.warn("BroadcastChannel unavailable, using storage listeners and polling.");
-    }
-
-    // Mechanism 2: Storage Event (Fires when localStorage changes in same engine)
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'pullerOverlay' && e.newValue) {
-        applyData(JSON.parse(e.newValue));
-      }
-    });
-
-    // Mechanism 3: Rapid Polling Loop (Captures changes across isolated browser engines/OBS CEF)
-    setInterval(checkLocalStorage, 200);
-
-    // Initial check on load
-    checkLocalStorage();
+    connect();
   </script>
 </body>
 </html>
