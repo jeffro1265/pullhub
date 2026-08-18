@@ -654,7 +654,7 @@
             <span class="slider"></span>
           </label>
           <div>
-            <strong>${p.driver || 'N/A'}</strong> — "${p.vehicle || 'N/A'}"<br>
+            <strong>${p.driver || 'N/A'}</strong> — ${p.vehicle || 'N/A'}<br>
             <small style="color: var(--subtext);">${p.hometown || 'N/A'}</small>
           </div>
         </div>
@@ -768,7 +768,7 @@
       tr.innerHTML = `
         <td class="rank-cell">#${idx + 1}</td>
         <td><strong>${p.driver}</strong></td>
-        <td>"${p.vehicle}"</td>
+        <td>${p.vehicle}</td>
         <td><strong style="color: var(--accent-green);">${distFormatted} FT</strong></td>
       `;
       tbody.appendChild(tr);
