@@ -2,66 +2,256 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Stream Overlay</title>
+  <title>OBS Broadcast Overlay</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; font-family: 'Arial Black', sans-serif; }
-    .lower-third { position: absolute; bottom: 60px; left: 60px; display: flex; background: #1a8cff; color: #fff; border-radius: 8px; opacity: 0; transform: translateY(40px); transition: all 0.4s ease-in-out; overflow: hidden; }
-    .lower-third.visible { opacity: 1; transform: translateY(0); }
-    .info-block { padding: 16px 28px; display: flex; flex-direction: column; }
-    .driver-name { font-size: 30px; text-transform: uppercase; }
-    .meta-info { font-size: 16px; font-weight: normal; font-family: sans-serif; opacity: 0.9; margin-top: 4px; }
-    .distance-block { background: #005bb5; padding: 16px 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 3px solid #fff; }
-    .distance-value { font-size: 34px; }
-    .distance-label { font-size: 11px; font-family: sans-serif; text-transform: uppercase; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: transparent;
+      font-family: 'Impact', 'Arial Black', sans-serif;
+    }
+
+    /* LOWER THIRD GRAPHIC */
+    #lower-third {
+      position: absolute;
+      bottom: 60px;
+      left: 60px;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transform: translateY(40px);
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    #lower-third.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .header-bar {
+      background: #e63946;
+      color: #ffffff;
+      padding: 6px 18px;
+      font-size: 22px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      width: fit-content;
+      border-radius: 4px 4px 0 0;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .main-bar {
+      background: rgba(18, 18, 18, 0.95);
+      color: #ffffff;
+      padding: 14px 24px;
+      border-left: 8px solid #e63946;
+      border-radius: 0 6px 6px 6px;
+      display: flex;
+      gap: 35px;
+      align-items: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+    }
+
+    .driver-info {
+      font-size: 32px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .vehicle-info {
+      font-size: 22px;
+      color: #ffb703;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-weight: bold;
+      margin-top: 2px;
+    }
+
+    .distance-tag {
+      font-size: 36px;
+      background: #000000;
+      padding: 4px 14px;
+      border-radius: 4px;
+      color: #2ec4b6;
+      border: 1px solid #333333;
+      min-width: 140px;
+      text-align: center;
+    }
+
+    /* TOP 5 LEADERBOARD BOARD */
+    #leaderboard {
+      position: absolute;
+      top: 60px;
+      right: 60px;
+      width: 480px;
+      background: rgba(18, 18, 18, 0.95);
+      border-radius: 8px;
+      border: 1px solid #333;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateX(50px);
+      transition: all 0.4s ease-in-out;
+    }
+
+    #leaderboard.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .lb-header {
+      background: #e63946;
+      color: #fff;
+      padding: 12px 20px;
+      font-size: 24px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .lb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px;
+      border-bottom: 1px solid #2a2a2a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .lb-rank {
+      font-family: 'Impact', sans-serif;
+      font-size: 22px;
+      color: #e63946;
+      width: 35px;
+    }
+
+    .lb-details {
+      flex-grow: 1;
+      padding-left: 10px;
+    }
+
+    .lb-driver {
+      font-weight: bold;
+      font-size: 16px;
+      color: #fff;
+    }
+
+    .lb-vehicle {
+      font-size: 13px;
+      color: #aaa;
+    }
+
+    .lb-distance {
+      font-family: 'Impact', sans-serif;
+      font-size: 22px;
+      color: #2ec4b6;
+    }
   </style>
 </head>
 <body>
-  <div id="overlay" class="lower-third">
-    <div class="info-block">
-      <div id="driver" class="driver-name">Driver Name</div>
-      <div class="meta-info"><span id="team">Team Name</span> &bull; <span id="town">Hometown</span></div>
-    </div>
-    <div class="distance-block">
-      <div id="distance" class="distance-value">000.00</div>
-      <div class="distance-label">Distance</div>
+
+  <!-- Single Puller Lower Third -->
+  <div id="lower-third">
+    <div class="header-bar" id="pullClass">MODIFIED TRACTOR</div>
+    <div class="main-bar">
+      <div>
+        <div class="driver-info" id="driverName">DRIVER NAME</div>
+        <div class="vehicle-info" id="vehicleName">VEHICLE NAME</div>
+      </div>
+      <div class="distance-tag" id="distance">0.00 FT</div>
     </div>
   </div>
 
+  <!-- Top 5 Leaderboard Standings -->
+  <div id="leaderboard">
+    <div class="lb-header">TOP 5 STANDINGS</div>
+    <div id="lb-rows"></div>
+  </div>
+
   <script>
-    // Must match the topic string used in index.html
-    const CHANNEL_TOPIC = 'mypullingchannel123';
-    
-    const overlay = document.getElementById('overlay');
-    const driverEl = document.getElementById('driver');
-    const teamEl = document.getElementById('team');
-    const townEl = document.getElementById('town');
-    const distanceEl = document.getElementById('distance');
+    const urlParams = new URLSearchParams(window.location.search);
+    const channelName = urlParams.get('channel') || 'pulling_event_default_channel';
+    const topic = `smog_media_pulling/${channelName}/control`;
 
-    function connect() {
-      const eventSource = new EventSource(`https://ntfy.sh/${CHANNEL_TOPIC}/sse`);
-      
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(JSON.parse(event.data).message);
-          if (data.active) {
-            driverEl.textContent = data.driver || 'N/A';
-            teamEl.textContent = data.team || 'N/A';
-            townEl.textContent = data.town || 'N/A';
-            distanceEl.textContent = data.distance || '0.00';
-            overlay.classList.add('visible');
-          } else {
-            overlay.classList.remove('visible');
+    const lowerThird = document.getElementById('lower-third');
+    const leaderboard = document.getElementById('leaderboard');
+
+    const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+      clientId: 'obs_overlay_' + Math.random().toString(16).substr(2, 8)
+    });
+
+    client.on('connect', () => {
+      client.subscribe(topic);
+    });
+
+    client.on('message', (t, message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        const { type, payload, visible } = data;
+
+        // 1. Single Puller Lower Third Update
+        if (type === 'UPDATE_PULLER') {
+          leaderboard.classList.remove('visible'); // Hide leaderboard when puller graphic is triggered
+
+          document.getElementById('driverName').innerText = payload.driver.toUpperCase();
+          
+          let vehicleText = payload.vehicle.toUpperCase();
+          if (payload.hometown) {
+            vehicleText += ` (${payload.hometown.toUpperCase()})`;
           }
-        } catch(e) {}
-      };
+          document.getElementById('vehicleName').innerText = vehicleText;
+          
+          if (payload.pullClass) {
+            document.getElementById('pullClass').innerText = payload.pullClass.toUpperCase();
+          }
 
-      eventSource.onerror = () => {
-        eventSource.close();
-        setTimeout(connect, 2000); // Reconnect if disconnected
-      };
-    }
+          document.getElementById('distance').innerText = payload.distance ? `${payload.distance} FT` : 'ON TRACK';
+        }
 
-    connect();
+        // 2. Lower Third Visibility Toggle
+        if (type === 'TOGGLE_VISIBILITY') {
+          if (visible) {
+            leaderboard.classList.remove('visible');
+            lowerThird.classList.add('visible');
+          } else {
+            lowerThird.classList.remove('visible');
+          }
+        }
+
+        // 3. Render Top 5 Leaderboard
+        if (type === 'UPDATE_LEADERBOARD') {
+          lowerThird.classList.remove('visible'); // Hide lower third when leaderboard is triggered
+          
+          const lbRows = document.getElementById('lb-rows');
+          lbRows.innerHTML = '';
+
+          payload.forEach((p, idx) => {
+            const row = document.createElement('div');
+            row.className = 'lb-row';
+            row.innerHTML = `
+              <div class="lb-rank">#${idx + 1}</div>
+              <div class="lb-details">
+                <div class="lb-driver">${p.driver.toUpperCase()}</div>
+                <div class="lb-vehicle">${p.vehicle.toUpperCase()}</div>
+              </div>
+              <div class="lb-distance">${p.distance.toFixed(2)} FT</div>
+            `;
+            lbRows.appendChild(row);
+          });
+
+          leaderboard.classList.add('visible');
+        }
+
+        // 4. Hide Leaderboard Directly
+        if (type === 'HIDE_LEADERBOARD') {
+          leaderboard.classList.remove('visible');
+        }
+
+      } catch (e) {
+        console.error("Failed to parse incoming WS message:", e);
+      }
+    });
   </script>
 </body>
 </html>
