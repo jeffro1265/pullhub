@@ -24,7 +24,6 @@
     }
     .container { max-width: 900px; margin: 0 auto; }
     
-    /* Connection Header */
     .status-card {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -50,7 +49,6 @@
 
     h3 { margin-top: 0; }
 
-    /* Form Inputs */
     input[type="text"], textarea {
       width: 100%;
       background: #2a2a2a;
@@ -78,7 +76,6 @@
       background: #d62828;
     }
 
-    /* Driver Rows & Leaderboard Bar */
     .puller-row, .leaderboard-bar-wrapper {
       position: relative;
       background: #262626;
@@ -106,7 +103,6 @@
     .row-left { display: flex; align-items: center; gap: 15px; z-index: 1; }
     .row-right { display: flex; align-items: center; gap: 10px; z-index: 1; }
 
-    /* Custom Switch CSS */
     .switch {
       position: relative;
       display: inline-block;
@@ -135,7 +131,6 @@
     input:checked + .slider { background-color: var(--accent-green); }
     input:checked + .slider:before { transform: translateX(24px); }
 
-    /* Results Table */
     .leaderboard-table {
       width: 100%;
       border-collapse: collapse;
@@ -160,7 +155,6 @@
 
 <div class="container">
   
-  <!-- System Status Header -->
   <div class="status-card">
     <div class="status-bar">
       <div id="statusDot" class="indicator disconnected"></div>
@@ -172,7 +166,6 @@
     </div>
   </div>
 
-  <!-- PANEL 1: TSV Import -->
   <div class="card">
     <h3>Panel 1: Import TSV Roster</h3>
     <p><small style="color: var(--subtext);">Paste tab-separated columns from Excel/Google Sheets in this order:<br>
@@ -184,17 +177,14 @@
     </div>
   </div>
 
-  <!-- PANEL 2: Live Puller Control -->
   <div class="card">
     <h3>Panel 2: Live Overlay Controls</h3>
     <div id="pullerList"><i>No participants imported. Paste TSV data above to load roster.</i></div>
   </div>
 
-  <!-- PANEL 3: Leaderboard Results -->
   <div class="card">
     <h3>Panel 3: Leaderboard Standings</h3>
     
-    <!-- Manual Leaderboard Switch Bar -->
     <div class="leaderboard-bar-wrapper">
       <div class="row-left">
         <label class="switch">
@@ -224,7 +214,6 @@
     </table>
   </div>
 
-  <!-- Bottom Clear Button -->
   <div style="margin-top: 30px; text-align: center; margin-bottom: 40px;">
     <button onclick="clearAllData()" class="btn-danger" style="padding: 14px 28px; font-size: 16px; border-radius: 6px;">
       ⚠️ Reset Event Data & Clear Saved Storage
@@ -242,7 +231,6 @@
   const STORAGE_KEY_PULLERS = 'smog_pullers_data_v1';
   const STORAGE_KEY_TSV = 'smog_tsv_raw_text_v1';
 
-  // LOAD SAVED DATA FROM BROWSER STORAGE ON START
   function loadSavedData() {
     const savedTSV = localStorage.getItem(STORAGE_KEY_TSV);
     if (savedTSV) {
@@ -266,7 +254,6 @@
     localStorage.setItem(STORAGE_KEY_TSV, document.getElementById('tsvInput').value);
   }
 
-  // MQTT WEBSOCKET CONNECTION
   function initMQTT() {
     const channelName = document.getElementById('channelId').value.trim();
     topic = `smog_media_pulling/${channelName}/control`;
@@ -291,7 +278,6 @@
     });
   }
 
-  // PANEL 1: TSV PARSER WITH SMART DISTANCE MERGING
   function parseTSV() {
     const rawText = document.getElementById('tsvInput').value;
     if (!rawText.trim()) return;
@@ -328,7 +314,6 @@
     updateLeaderboard();
   }
 
-  // CLEAR ALL SAVED DATA
   function clearAllData() {
     if (confirm("Are you sure you want to clear all imported roster data and distances? This cannot be undone.")) {
       localStorage.removeItem(STORAGE_KEY_PULLERS);
@@ -347,7 +332,6 @@
     }
   }
 
-  // PANEL 2: RENDER LIVE CONTROLS (REMOVED CLASS DISPLAY FROM ROWS)
   function renderPullers() {
     const container = document.getElementById('pullerList');
     container.innerHTML = '';
@@ -358,6 +342,7 @@
     }
 
     pullers.forEach((p) => {
+      const distValue = (p.distance !== null && p.distance !== undefined && p.distance !== 0) ? p.distance : '';
       const row = document.createElement('div');
       row.className = 'puller-row';
       row.id = `row-${p.id}`;
@@ -374,7 +359,7 @@
           </div>
         </div>
         <div class="row-right">
-          <input type="text" id="dist-${p.id}" value="${p.distance !== null && p.distance !== undefined ? p.distance : ''}" placeholder="Distance (FT)" style="width: 120px;" oninput="updateDistance('${p.id}', this.value)">
+          <input type="text" id="dist-${p.id}" value="${distValue}" placeholder="Distance (FT)" style="width: 120px;" oninput="updateDistance('${p.id}', this.value)">
         </div>
       `;
       container.appendChild(row);
@@ -385,18 +370,17 @@
     const p = pullers.find(item => item.id === id);
     if (p) {
       const trimmed = val.trim();
-      if (trimmed === '') {
+      if (trimmed === '' || trimmed === '0') {
         p.distance = null;
       } else {
         const num = parseFloat(trimmed);
-        p.distance = isNaN(num) ? null : num;
+        p.distance = isNaN(num) || num === 0 ? null : num;
       }
       saveToStorage();
       updateLeaderboard();
     }
   }
 
-  // 10-SECOND AUTO-OFF TIMER SWITCH LOGIC (DRIVER OVERLAYS)
   function handleToggle(id) {
     const toggle = document.getElementById(`toggle-${id}`);
     const timerBar = document.getElementById(`bar-${id}`);
@@ -413,12 +397,13 @@
 
     if (toggle.checked) {
       const p = pullers.find(item => item.id === id);
-      const distVal = document.getElementById(`dist-${id}`).value.trim();
+      const rawDist = document.getElementById(`dist-${id}`).value.trim();
+      const distVal = (rawDist === '' || rawDist === '0') ? null : rawDist;
 
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({
           type: 'UPDATE_PULLER',
-          payload: { ...p, distance: distVal !== '' ? distVal : null }
+          payload: { ...p, distance: distVal }
         }));
         client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
       }
@@ -450,7 +435,6 @@
     }
   }
 
-  // PANEL 3: LEADERBOARD CALCULATION
   function updateLeaderboard() {
     const sorted = [...pullers]
       .filter(p => p.distance !== null && p.distance > 0)
@@ -508,7 +492,6 @@
     }
   }
 
-  // INITIALIZE BOOT SEQUENCE
   loadSavedData();
   initMQTT();
 </script>
