@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Broadcast Lower Third & Leaderboard Overlay</title>
+  <title>OBS Broadcast Overlay</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     body {
@@ -13,253 +13,326 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* Lower Third Styling */
+    /* Dynamic Lower Third Banner */
     #lower-third {
       position: absolute;
       bottom: 50px;
-      left: 50px;
+      left: 50%;
+      
+      width: max-content;
+      max-width: 85vw;
+      box-sizing: border-box;
+      
+      padding: 18px 36px;
+      background: linear-gradient(to bottom, #35558F, #1c3054);
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      border-radius: 12px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+      
       display: flex;
-      align-items: stretch;
+      align-items: center;
+      gap: 26px;
+
       opacity: 0;
-      transform: translateY(20px);
+      transform: translate(-50%, 60px);
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
+
     #lower-third.visible {
       opacity: 1;
-      transform: translateY(0);
+      transform: translate(-50%, 0);
     }
 
-    .lt-accent {
-      width: 10px;
-      background: #2ec4b6;
-      border-top-left-radius: 6px;
-      border-bottom-left-radius: 6px;
+    .logo-container {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .lt-body {
-      background: rgba(18, 18, 18, 0.92);
-      border: 1px solid #333333;
-      border-left: none;
-      border-top-right-radius: 6px;
-      border-bottom-right-radius: 6px;
-      padding: 16px 28px;
-      color: #ffffff;
-      min-width: 320px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    .logo-container img {
+      height: 105px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
     }
 
-    .lt-vehicle {
-      font-size: 28px;
-      font-weight: 800;
+    .info-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .vehicle-info {
+      font-size: 45px;
+      font-weight: 900;
       color: #ffffff;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
       line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
     }
 
-    .lt-driver {
-      font-size: 18px;
-      color: #aaaaaa;
-      margin-top: 4px;
-      font-weight: 500;
+    .driver-info {
+      font-size: 27px;
+      font-weight: 600;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      opacity: 0.95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
     }
 
-    .lt-distance {
-      font-size: 22px;
-      font-weight: 700;
-      color: #2ec4b6;
-      margin-top: 8px;
+    .distance-tag {
+      font-size: 45px;
+      font-weight: 800;
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      text-align: center;
+      letter-spacing: 1.5px;
       display: none;
+      flex-shrink: 0;
+      box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4);
     }
 
-    /* Leaderboard Styling */
+    /* Dynamic Centered Results Board */
     #leaderboard {
       position: absolute;
-      top: 50px;
-      right: 50px;
-      width: 380px;
-      background: rgba(18, 18, 18, 0.95);
-      border: 1px solid #333333;
-      border-radius: 8px;
+      top: 50%;
+      left: 50%;
+      
+      width: fit-content;
+      min-width: 650px;
+      max-width: 90vw;
+      
+      background: linear-gradient(to bottom, #35558F, #1c3054);
+      border-radius: 12px;
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
       overflow: hidden;
-      color: #ffffff;
       opacity: 0;
-      transform: translateX(30px);
+      transform: translate(-50%, -40%);
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
     }
+
     #leaderboard.visible {
       opacity: 1;
-      transform: translateX(0);
+      transform: translate(-50%, -50%);
     }
 
     .lb-header {
-      background: #35558F;
-      padding: 14px 18px;
-      font-size: 18px;
-      font-weight: 800;
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .lb-header img {
+      height: 70px;
+      width: auto;
+      object-fit: contain;
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    }
+
+    .lb-header-text {
+      font-size: clamp(22px, 3.2vw, 36px);
+      font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      border-bottom: 2px solid #2ec4b6;
+      letter-spacing: 1.2px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      line-height: 1.1;
+      white-space: nowrap;
+      flex-grow: 1;
     }
 
     .lb-row {
       display: flex;
       align-items: center;
-      padding: 12px 18px;
-      border-bottom: 1px solid #2a2a2a;
+      justify-content: space-between;
+      gap: 30px;
+      padding: 14px 28px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.1);
     }
+
     .lb-row:last-child {
       border-bottom: none;
     }
 
     .lb-rank {
-      font-size: 20px;
-      font-weight: 800;
-      color: #2ec4b6;
-      width: 40px;
+      font-size: 28px;
+      font-weight: 900;
+      color: #ffffff;
+      width: 45px;
+      flex-shrink: 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
 
     .lb-details {
       flex-grow: 1;
+      white-space: nowrap;
     }
 
     .lb-vehicle {
-      font-size: 16px;
-      font-weight: 700;
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .lb-driver {
-      font-size: 13px;
-      color: #aaaaaa;
+      font-size: 16px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+      text-transform: uppercase;
+      margin-top: 2px;
     }
 
     .lb-distance {
-      font-size: 16px;
+      font-size: 26px;
       font-weight: 800;
       color: #ffffff;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
   </style>
 </head>
 <body>
 
-  <!-- Lower Third Banner -->
+  <!-- Dynamic Centered Lower Third Banner -->
   <div id="lower-third">
-    <div class="lt-accent"></div>
-    <div class="lt-body">
-      <div id="vehicleName" class="lt-vehicle"></div>
-      <div id="driverDetails" class="lt-driver"></div>
-      <div id="distance" class="lt-distance"></div>
+    <div class="logo-container">
+      <img src="logo.png" alt="OSTPA Logo">
     </div>
+    <div class="info-container">
+      <div class="vehicle-info" id="vehicleName">"VEHICLE NAME"</div>
+      <div class="driver-info" id="driverDetails">DRIVER NAME</div>
+    </div>
+    <div class="distance-tag" id="distance"></div>
   </div>
 
-  <!-- Leaderboard Table Overlay -->
+  <!-- Dynamic Centered Results Board -->
   <div id="leaderboard">
-    <div id="lbTitle" class="lb-header">TOP 5 RESULTS</div>
+    <div class="lb-header">
+      <img src="logo.png" alt="OSTPA Logo">
+      <div class="lb-header-text" id="lbTitle">TOP 5 RESULTS</div>
+    </div>
     <div id="lb-rows"></div>
   </div>
 
-<script>
-  const urlParams = new URLSearchParams(window.location.search);
-  const channelName = urlParams.get('channel') || 'pulling_event_default_channel';
-  const topic = `smog_media_pulling/${channelName}/control`;
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const channelName = urlParams.get('channel') || 'pulling_event_default_channel';
+    const topic = `smog_media_pulling/${channelName}/control`;
 
-  const lowerThird = document.getElementById('lower-third');
-  const leaderboard = document.getElementById('leaderboard');
-  const distanceEl = document.getElementById('distance');
+    const lowerThird = document.getElementById('lower-third');
+    const leaderboard = document.getElementById('leaderboard');
+    const distanceEl = document.getElementById('distance');
 
-  const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-    clientId: 'obs_overlay_' + Math.random().toString(16).substr(2, 8)
-  });
+    const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+      clientId: 'obs_overlay_' + Math.random().toString(16).substr(2, 8)
+    });
 
-  client.on('connect', () => {
-    client.subscribe(topic);
-  });
+    client.on('connect', () => {
+      client.subscribe(topic);
+    });
 
-  client.on('message', (t, message) => {
-    try {
-      const data = JSON.parse(message.toString());
-      const { type, payload, visible, classHeader } = data;
+    client.on('message', (t, message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        const { type, payload, visible, classHeader } = data;
 
-      if (type === 'UPDATE_PULLER') {
-        leaderboard.classList.remove('visible');
-
-        const vName = payload.vehicle ? payload.vehicle.toUpperCase() : '';
-        document.getElementById('vehicleName').innerText = vName ? (vName.startsWith('"') ? vName : `"${vName}"`) : '';
-
-        let driverText = payload.driver ? payload.driver.toUpperCase() : '';
-        if (payload.hometown) {
-          driverText += ` — ${payload.hometown.toUpperCase()}`;
-        }
-        
-        const driverEl = document.getElementById('driverDetails');
-        if (driverText) {
-          driverEl.innerText = driverText;
-          driverEl.style.display = 'block';
-        } else {
-          driverEl.style.display = 'none';
-        }
-
-        const distVal = payload.distance !== null && payload.distance !== undefined ? String(payload.distance).trim() : '';
-        
-        if (distVal !== '' && distVal !== '0') {
-          distanceEl.innerText = `${distVal} FT`;
-          distanceEl.style.display = 'block';
-        } else {
-          distanceEl.innerText = '';
-          distanceEl.style.display = 'none';
-        }
-      }
-
-      if (type === 'TOGGLE_VISIBILITY') {
-        if (visible) {
+        if (type === 'UPDATE_PULLER') {
           leaderboard.classList.remove('visible');
-          lowerThird.classList.add('visible');
-        } else {
-          lowerThird.classList.remove('visible');
-        }
-      }
 
-      if (type === 'UPDATE_LEADERBOARD') {
-        lowerThird.classList.remove('visible');
-        
-        const lbTitle = document.getElementById('lbTitle');
-        const headerLabel = classHeader ? classHeader.toUpperCase().trim() : 'TOP 5';
-        lbTitle.innerText = `${headerLabel} RESULTS`;
+          const vName = payload.vehicle ? payload.vehicle.toUpperCase() : '';
+          document.getElementById('vehicleName').innerText = vName ? `"${vName}"` : '';
 
-        const lbRows = document.getElementById('lb-rows');
-        lbRows.innerHTML = '';
+          let driverText = payload.driver ? payload.driver.toUpperCase() : '';
+          if (payload.hometown) {
+            driverText += ` — ${payload.hometown.toUpperCase()}`;
+          }
+          document.getElementById('driverDetails').innerText = driverText;
 
-        payload.forEach((p, idx) => {
-          const distNum = parseFloat(p.distance);
-          const distDisplay = isNaN(distNum) ? p.distance : distNum.toFixed(2);
+          const distVal = payload.distance !== null && payload.distance !== undefined ? String(payload.distance).trim() : '';
           
-          const row = document.createElement('div');
-          row.className = 'lb-row';
-          row.innerHTML = `
-            <div class="lb-rank">#${idx + 1}</div>
-            <div class="lb-details">
-              <div class="lb-vehicle">"${p.vehicle.toUpperCase()}"</div>
-              <div class="lb-driver">${p.driver.toUpperCase()}</div>
-            </div>
-            <div class="lb-distance">${distDisplay} FT</div>
-          `;
-          lbRows.appendChild(row);
-        });
+          if (distVal !== '' && distVal !== '0') {
+            distanceEl.innerText = `${distVal} FT`;
+            distanceEl.style.display = 'block';
+          } else {
+            distanceEl.innerText = '';
+            distanceEl.style.display = 'none';
+          }
+        }
 
-        leaderboard.classList.add('visible');
+        if (type === 'TOGGLE_VISIBILITY') {
+          if (visible) {
+            leaderboard.classList.remove('visible');
+            lowerThird.classList.add('visible');
+          } else {
+            lowerThird.classList.remove('visible');
+          }
+        }
+
+        if (type === 'UPDATE_LEADERBOARD') {
+          lowerThird.classList.remove('visible');
+          
+          const lbTitle = document.getElementById('lbTitle');
+          const headerLabel = classHeader ? classHeader.toUpperCase().trim() : 'TOP 5';
+          lbTitle.innerText = `${headerLabel} RESULTS`;
+
+          const lbRows = document.getElementById('lb-rows');
+          lbRows.innerHTML = '';
+
+          payload.forEach((p, idx) => {
+            const distNum = parseFloat(p.distance);
+            const distDisplay = isNaN(distNum) ? p.distance : distNum.toFixed(2);
+            
+            const row = document.createElement('div');
+            row.className = 'lb-row';
+            row.innerHTML = `
+              <div class="lb-rank">#${idx + 1}</div>
+              <div class="lb-details">
+                <div class="lb-vehicle">"${p.vehicle.toUpperCase()}"</div>
+                <div class="lb-driver">${p.driver.toUpperCase()}</div>
+              </div>
+              <div class="lb-distance">${distDisplay} FT</div>
+            `;
+            lbRows.appendChild(row);
+          });
+
+          leaderboard.classList.add('visible');
+        }
+
+        if (type === 'HIDE_LEADERBOARD') {
+          leaderboard.classList.remove('visible');
+        }
+
+      } catch (e) {
+        console.error("Failed to parse incoming WS message:", e);
       }
-
-      if (type === 'HIDE_LEADERBOARD') {
-        leaderboard.classList.remove('visible');
-      }
-
-    } catch (e) {
-      console.error("Failed to parse incoming WS message:", e);
-    }
-  });
-</script>
-
+    });
+  </script>
 </body>
 </html>
