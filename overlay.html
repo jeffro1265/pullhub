@@ -10,18 +10,29 @@
       padding: 0;
       overflow: hidden;
       background: transparent;
-      font-family: 'Impact', 'Arial Black', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
+    /* Full-Width Rectangular Lower Third */
     #lower-third {
       position: absolute;
-      bottom: 60px;
-      left: 60px;
+      bottom: 50px;
+      left: 0;
+      width: 100vw;
+      box-sizing: border-box;
+      padding: 16px 60px;
+      background: linear-gradient(to bottom, #35558F, #1c3054);
+      border-top: 3px solid rgba(255, 255, 255, 0.2);
+      border-bottom: 3px solid rgba(0, 0, 0, 0.4);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+
       opacity: 0;
-      transform: translateY(40px);
-      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform: translateY(100%);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     #lower-third.visible {
@@ -29,56 +40,50 @@
       transform: translateY(0);
     }
 
-    .header-bar {
-      background: #e63946;
-      color: #ffffff;
-      padding: 6px 18px;
-      font-size: 22px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      width: fit-content;
-      border-radius: 4px 4px 0 0;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    }
-
-    .main-bar {
-      background: rgba(18, 18, 18, 0.95);
-      color: #ffffff;
-      padding: 14px 24px;
-      border-left: 8px solid #e63946;
-      border-radius: 0 6px 6px 6px;
+    .info-container {
       display: flex;
-      gap: 35px;
-      align-items: center;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      flex-direction: column;
+      gap: 4px;
     }
 
-    .driver-info {
-      font-size: 32px;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-
+    /* Vehicle Name (Top, Larger) */
     .vehicle-info {
-      font-size: 22px;
-      color: #ffb703;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-weight: bold;
-      margin-top: 2px;
+      font-size: 38px;
+      font-weight: 900;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      line-height: 1.1;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
 
+    /* Driver Name & Hometown (Bottom) */
+    .driver-info {
+      font-size: 24px;
+      font-weight: 500;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.95;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Distance Badge (Right-Aligned) */
     .distance-tag {
-      font-size: 36px;
-      background: #000000;
-      padding: 4px 14px;
-      border-radius: 4px;
-      color: #2ec4b6;
-      border: 1px solid #333333;
-      min-width: 120px;
+      font-size: 38px;
+      font-weight: 800;
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 6px 20px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       text-align: center;
+      letter-spacing: 1px;
       display: none;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
+    /* Standings Overlay */
     #leaderboard {
       position: absolute;
       top: 60px;
@@ -100,10 +105,11 @@
     }
 
     .lb-header {
-      background: #e63946;
+      background: #35558F;
       color: #fff;
       padding: 12px 20px;
       font-size: 24px;
+      font-weight: bold;
       text-align: center;
       text-transform: uppercase;
       letter-spacing: 1px;
@@ -115,13 +121,12 @@
       justify-content: space-between;
       padding: 10px 18px;
       border-bottom: 1px solid #2a2a2a;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     .lb-rank {
-      font-family: 'Impact', sans-serif;
       font-size: 22px;
-      color: #e63946;
+      font-weight: bold;
+      color: #35558F;
       width: 35px;
     }
 
@@ -142,8 +147,8 @@
     }
 
     .lb-distance {
-      font-family: 'Impact', sans-serif;
       font-size: 22px;
+      font-weight: bold;
       color: #2ec4b6;
     }
   </style>
@@ -151,14 +156,11 @@
 <body>
 
   <div id="lower-third">
-    <div class="header-bar" id="pullClass">MODIFIED TRACTOR</div>
-    <div class="main-bar">
-      <div>
-        <div class="driver-info" id="driverName">DRIVER NAME</div>
-        <div class="vehicle-info" id="vehicleName">VEHICLE NAME</div>
-      </div>
-      <div class="distance-tag" id="distance"></div>
+    <div class="info-container">
+      <div class="vehicle-info" id="vehicleName">VEHICLE NAME</div>
+      <div class="driver-info" id="driverDetails">DRIVER NAME</div>
     </div>
+    <div class="distance-tag" id="distance"></div>
   </div>
 
   <div id="leaderboard">
@@ -191,18 +193,17 @@
         if (type === 'UPDATE_PULLER') {
           leaderboard.classList.remove('visible');
 
-          document.getElementById('driverName').innerText = payload.driver.toUpperCase();
-          
-          let vehicleText = payload.vehicle.toUpperCase();
-          if (payload.hometown) {
-            vehicleText += ` (${payload.hometown.toUpperCase()})`;
-          }
-          document.getElementById('vehicleName').innerText = vehicleText;
-          
-          if (payload.pullClass) {
-            document.getElementById('pullClass').innerText = payload.pullClass.toUpperCase();
-          }
+          // Top Line: Vehicle Name
+          document.getElementById('vehicleName').innerText = payload.vehicle ? payload.vehicle.toUpperCase() : '';
 
+          // Bottom Line: Driver Name & Hometown
+          let driverText = payload.driver ? payload.driver.toUpperCase() : '';
+          if (payload.hometown) {
+            driverText += ` — ${payload.hometown.toUpperCase()}`;
+          }
+          document.getElementById('driverDetails').innerText = driverText;
+
+          // Distance logic
           const distVal = payload.distance !== null && payload.distance !== undefined ? String(payload.distance).trim() : '';
           
           if (distVal !== '' && distVal !== '0') {
