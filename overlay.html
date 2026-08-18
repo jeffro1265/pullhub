@@ -13,7 +13,6 @@
       font-family: 'Impact', 'Arial Black', sans-serif;
     }
 
-    /* LOWER THIRD GRAPHIC */
     #lower-third {
       position: absolute;
       bottom: 60px;
@@ -77,10 +76,9 @@
       border: 1px solid #333333;
       min-width: 120px;
       text-align: center;
-      display: none; /* Controlled dynamically via JS */
+      display: none;
     }
 
-    /* TOP 5 LEADERBOARD BOARD */
     #leaderboard {
       position: absolute;
       top: 60px;
@@ -152,7 +150,6 @@
 </head>
 <body>
 
-  <!-- Single Puller Lower Third -->
   <div id="lower-third">
     <div class="header-bar" id="pullClass">MODIFIED TRACTOR</div>
     <div class="main-bar">
@@ -164,7 +161,6 @@
     </div>
   </div>
 
-  <!-- Top 5 Leaderboard Standings -->
   <div id="leaderboard">
     <div class="lb-header">TOP 5 STANDINGS</div>
     <div id="lb-rows"></div>
@@ -192,7 +188,6 @@
         const data = JSON.parse(message.toString());
         const { type, payload, visible } = data;
 
-        // 1. Single Puller Lower Third Update
         if (type === 'UPDATE_PULLER') {
           leaderboard.classList.remove('visible');
 
@@ -208,9 +203,10 @@
             document.getElementById('pullClass').innerText = payload.pullClass.toUpperCase();
           }
 
-          // Handle Distance Box (Hide completely if empty or null)
-          if (payload.distance !== null && payload.distance !== undefined && String(payload.distance).trim() !== '') {
-            distanceEl.innerText = `${payload.distance} FT`;
+          const distVal = payload.distance !== null && payload.distance !== undefined ? String(payload.distance).trim() : '';
+          
+          if (distVal !== '' && distVal !== '0') {
+            distanceEl.innerText = `${distVal} FT`;
             distanceEl.style.display = 'block';
           } else {
             distanceEl.innerText = '';
@@ -218,7 +214,6 @@
           }
         }
 
-        // 2. Lower Third Visibility Toggle
         if (type === 'TOGGLE_VISIBILITY') {
           if (visible) {
             leaderboard.classList.remove('visible');
@@ -228,7 +223,6 @@
           }
         }
 
-        // 3. Render Top 5 Leaderboard
         if (type === 'UPDATE_LEADERBOARD') {
           lowerThird.classList.remove('visible');
           
@@ -255,7 +249,6 @@
           leaderboard.classList.add('visible');
         }
 
-        // 4. Hide Leaderboard Directly
         if (type === 'HIDE_LEADERBOARD') {
           leaderboard.classList.remove('visible');
         }
