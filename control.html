@@ -398,7 +398,7 @@
           </div>
         </div>
         <div class="row-right">
-          <input type="text" id="dist-${p.id}" value="${distValue}" placeholder="Distance (FT)" style="width: 120px;" oninput="updateDistance('${p.id}', this.value)">
+          <input type="text" inputmode="decimal" pattern="[0-9.]*" id="dist-${p.id}" value="${distValue}" placeholder="Distance (FT)" style="width: 120px;" oninput="updateDistance('${p.id}', this.value)">
         </div>
       `;
       container.appendChild(row);
