@@ -74,6 +74,13 @@
     }
     button:hover { opacity: 0.9; }
 
+    .btn-secondary {
+      background: #444444;
+    }
+    .btn-danger {
+      background: #d62828;
+    }
+
     /* Driver Rows & Leaderboard Bar */
     .puller-row, .leaderboard-bar-wrapper {
       position: relative;
@@ -144,6 +151,12 @@
     }
     .leaderboard-table th { background: #2a2a2a; color: var(--subtext); }
     .rank-cell { font-weight: bold; color: var(--accent-green); font-size: 18px; width: 50px; }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
   </style>
 </head>
 <body>
@@ -168,7 +181,10 @@
     <p><small style="color: var(--subtext);">Paste tab-separated columns from Excel/Google Sheets in this order:<br>
     <strong>Vehicle [TAB] Driver [TAB] Hometown [TAB] Class</strong></small></p>
     <textarea id="tsvInput" placeholder="Iron Maiden	John Doe	Des Moines, IA	Super Stock"></textarea>
-    <button onclick="parseTSV()" style="margin-top: 15px; width: 100%;">Parse & Load Roster</button>
+    <div class="button-group">
+      <button onclick="parseTSV()" style="flex: 2;">Parse & Save Roster</button>
+      <button onclick="clearAllData()" class="btn-danger" style="flex: 1;">Clear All Data</button>
+    </div>
   </div>
 
   <!-- PANEL 2: Live Puller Control -->
@@ -211,6 +227,13 @@
     </table>
   </div>
 
+  <!-- Bottom Clear Button -->
+  <div style="margin-top: 30px; text-align: center; margin-bottom: 40px;">
+    <button onclick="clearAllData()" class="btn-danger" style="padding: 14px 28px; font-size: 16px; border-radius: 6px;">
+      ⚠️ Reset Event Data & Clear Saved Storage
+    </button>
+  </div>
+
 </div>
 
 <script>
@@ -218,6 +241,33 @@
   let topic = '';
   let pullers = [];
   let timerIntervals = {};
+
+  const STORAGE_KEY_PULLERS = 'smog_pullers_data_v1';
+  const STORAGE_KEY_TSV = 'smog_tsv_raw_text_v1';
+
+  // LOAD SAVED DATA FROM BROWSER STORAGE ON START
+  function loadSavedData() {
+    const savedTSV = localStorage.getItem(STORAGE_KEY_TSV);
+    if (savedTSV) {
+      document.getElementById('tsvInput').value = savedTSV;
+    }
+
+    const savedPullers = localStorage.getItem(STORAGE_KEY_PULLERS);
+    if (savedPullers) {
+      try {
+        pullers = JSON.parse(savedPullers);
+        renderPullers();
+        updateLeaderboard();
+      } catch (e) {
+        console.error("Failed to parse saved puller data:", e);
+      }
+    }
+  }
+
+  function saveToStorage() {
+    localStorage.setItem(STORAGE_KEY_PULLERS, JSON.stringify(pullers));
+    localStorage.setItem(STORAGE_KEY_TSV, document.getElementById('tsvInput').value);
+  }
 
   // MQTT WEBSOCKET CONNECTION
   function initMQTT() {
@@ -244,32 +294,71 @@
     });
   }
 
-  // PANEL 1: TSV PARSER
+  // PANEL 1: TSV PARSER WITH SMART DISTANCE MERGING
   function parseTSV() {
     const rawText = document.getElementById('tsvInput').value;
     if (!rawText.trim()) return;
 
+    const existingDistances = {};
+    pullers.forEach(p => {
+      const key = `${p.driver.toLowerCase()}_${p.vehicle.toLowerCase()}`;
+      existingDistances[key] = p.distance || 0;
+    });
+
     const lines = rawText.trim().split('\n');
-    pullers = lines.map((line, id) => {
+    pullers = lines.map((line, idx) => {
       const parts = line.split('\t');
+      const vehicle = parts[0] ? parts[0].trim() : '';
+      const driver = parts[1] ? parts[1].trim() : '';
+      const hometown = parts[2] ? parts[2].trim() : '';
+      const pullClass = parts[3] ? parts[3].trim() : 'MODIFIED';
+
+      const key = `${driver.toLowerCase()}_${vehicle.toLowerCase()}`;
+      const distance = existingDistances[key] !== undefined ? existingDistances[key] : 0;
+
       return {
-        id,
-        vehicle: parts[0] ? parts[0].trim() : '',
-        driver: parts[1] ? parts[1].trim() : '',
-        hometown: parts[2] ? parts[2].trim() : '',
-        pullClass: parts[3] ? parts[3].trim() : 'MODIFIED',
-        distance: 0
+        id: 'p_' + idx + '_' + Math.random().toString(36).substr(2, 5),
+        vehicle,
+        driver,
+        hometown,
+        pullClass,
+        distance
       };
     });
 
+    saveToStorage();
     renderPullers();
     updateLeaderboard();
+  }
+
+  // CLEAR ALL SAVED DATA
+  function clearAllData() {
+    if (confirm("Are you sure you want to clear all imported roster data and distances? This cannot be undone.")) {
+      localStorage.removeItem(STORAGE_KEY_PULLERS);
+      localStorage.removeItem(STORAGE_KEY_TSV);
+      
+      document.getElementById('tsvInput').value = '';
+      pullers = [];
+      
+      renderPullers();
+      updateLeaderboard();
+
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+        client.publish(topic, JSON.stringify({ type: 'HIDE_LEADERBOARD' }));
+      }
+    }
   }
 
   // PANEL 2: RENDER LIVE CONTROLS
   function renderPullers() {
     const container = document.getElementById('pullerList');
     container.innerHTML = '';
+
+    if (pullers.length === 0) {
+      container.innerHTML = '<i>No participants imported. Paste TSV data above to load roster.</i>';
+      return;
+    }
 
     pullers.forEach((p) => {
       const row = document.createElement('div');
@@ -279,7 +368,7 @@
         <div class="timer-bar" id="bar-${p.id}"></div>
         <div class="row-left">
           <label class="switch">
-            <input type="checkbox" id="toggle-${p.id}" onchange="handleToggle(${p.id})">
+            <input type="checkbox" id="toggle-${p.id}" onchange="handleToggle('${p.id}')">
             <span class="slider"></span>
           </label>
           <div>
@@ -288,7 +377,7 @@
           </div>
         </div>
         <div class="row-right">
-          <input type="text" id="dist-${p.id}" placeholder="Distance (FT)" style="width: 120px;" oninput="updateDistance(${p.id}, this.value)">
+          <input type="text" id="dist-${p.id}" value="${p.distance > 0 ? p.distance : ''}" placeholder="Distance (FT)" style="width: 120px;" oninput="updateDistance('${p.id}', this.value)">
         </div>
       `;
       container.appendChild(row);
@@ -296,9 +385,13 @@
   }
 
   function updateDistance(id, val) {
-    const num = parseFloat(val);
-    pullers[id].distance = isNaN(num) ? 0 : num;
-    updateLeaderboard(); // Recalculate Top 5 in real time
+    const p = pullers.find(item => item.id === id);
+    if (p) {
+      const num = parseFloat(val);
+      p.distance = isNaN(num) ? 0 : num;
+      saveToStorage();
+      updateLeaderboard();
+    }
   }
 
   // 10-SECOND AUTO-OFF TIMER SWITCH LOGIC (DRIVER OVERLAYS)
@@ -306,7 +399,6 @@
     const toggle = document.getElementById(`toggle-${id}`);
     const timerBar = document.getElementById(`bar-${id}`);
 
-    // If driver graphic turns ON, automatically turn off leaderboard toggle if active
     const lbToggle = document.getElementById('lbToggle');
     if (toggle.checked && lbToggle.checked) {
       lbToggle.checked = false;
@@ -318,7 +410,7 @@
     }
 
     if (toggle.checked) {
-      const p = pullers[id];
+      const p = pullers.find(item => item.id === id);
       const distVal = document.getElementById(`dist-${id}`).value;
 
       if (client && client.connected) {
@@ -383,7 +475,6 @@
       tbody.appendChild(tr);
     });
 
-    // If leaderboard is currently active on screen, refresh its content live
     const lbToggle = document.getElementById('lbToggle');
     if (lbToggle.checked && client && client.connected) {
       client.publish(topic, JSON.stringify({
@@ -415,7 +506,8 @@
     }
   }
 
-  // Initialize MQTT on Boot
+  // INITIALIZE BOOT SEQUENCE
+  loadSavedData();
   initMQTT();
 </script>
 
