@@ -391,7 +391,7 @@
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({
           type: 'UPDATE_PULLER',
-          payload: { vehicle: line1, driver: line2, hometown: '', distance: null }
+          payload: { isBanner: true, vehicle: line1, driver: line2, hometown: '', distance: null }
         }));
         client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
       }
@@ -654,7 +654,7 @@
             <span class="slider"></span>
           </label>
           <div>
-            <strong>${p.driver || 'N/A'}</strong> — ${p.vehicle || 'N/A'}<br>
+            <strong>${p.driver || 'N/A'}</strong> — "${p.vehicle || 'N/A'}"<br>
             <small style="color: var(--subtext);">${p.hometown || 'N/A'}</small>
           </div>
         </div>
@@ -706,7 +706,7 @@
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({
           type: 'UPDATE_PULLER',
-          payload: { ...p, distance: distVal }
+          payload: { ...p, distance: distVal, isBanner: false }
         }));
         client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
       }
@@ -768,7 +768,7 @@
       tr.innerHTML = `
         <td class="rank-cell">#${idx + 1}</td>
         <td><strong>${p.driver}</strong></td>
-        <td>${p.vehicle}</td>
+        <td>"${p.vehicle}"</td>
         <td><strong style="color: var(--accent-green);">${distFormatted} FT</strong></td>
       `;
       tbody.appendChild(tr);
