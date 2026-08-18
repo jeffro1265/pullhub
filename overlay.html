@@ -13,77 +13,102 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* Full-Width Rectangular Lower Third */
+    /* Centered Lower Third (33.33% Width) */
     #lower-third {
       position: absolute;
       bottom: 50px;
-      left: 0;
-      width: 100vw;
+      left: 50%;
+      width: 33.33vw;
+      min-width: 600px; /* Ensures text doesn't wrap on lower-res viewports */
       box-sizing: border-box;
-      padding: 16px 60px;
+      padding: 12px 24px;
       background: linear-gradient(to bottom, #35558F, #1c3054);
-      border-top: 3px solid rgba(255, 255, 255, 0.2);
-      border-bottom: 3px solid rgba(0, 0, 0, 0.4);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
       
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 18px;
 
       opacity: 0;
-      transform: translateY(100%);
+      transform: translate(-50%, 40px); /* Center aligned + transition off-screen */
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     #lower-third.visible {
       opacity: 1;
-      transform: translateY(0);
+      transform: translate(-50%, 0);
+    }
+
+    /* Embedded Left Logo */
+    .logo-container {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-container img {
+      height: 70px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
     }
 
     .info-container {
+      flex-grow: 1;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
+      overflow: hidden;
     }
 
     /* Vehicle Name (Top, Larger) */
     .vehicle-info {
-      font-size: 38px;
+      font-size: 30px;
       font-weight: 900;
       color: #ffffff;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.8px;
       line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
 
     /* Driver Name & Hometown (Bottom) */
     .driver-info {
-      font-size: 24px;
-      font-weight: 500;
+      font-size: 18px;
+      font-weight: 600;
       color: #ffffff;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       opacity: 0.95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     }
 
     /* Distance Badge (Right-Aligned) */
     .distance-tag {
-      font-size: 38px;
+      font-size: 30px;
       font-weight: 800;
       color: #ffffff;
-      background: rgba(0, 0, 0, 0.35);
-      padding: 6px 20px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 14px;
       border-radius: 6px;
       border: 1px solid rgba(255, 255, 255, 0.2);
       text-align: center;
       letter-spacing: 1px;
       display: none;
+      flex-shrink: 0;
       box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
-    /* Standings Overlay */
+    /* Top 5 Standings Overlay */
     #leaderboard {
       position: absolute;
       top: 60px;
@@ -155,7 +180,11 @@
 </head>
 <body>
 
+  <!-- Centered Lower Third Banner -->
   <div id="lower-third">
+    <div class="logo-container">
+      <img src="logo.png" alt="OSTPA Logo">
+    </div>
     <div class="info-container">
       <div class="vehicle-info" id="vehicleName">VEHICLE NAME</div>
       <div class="driver-info" id="driverDetails">DRIVER NAME</div>
@@ -163,6 +192,7 @@
     <div class="distance-tag" id="distance"></div>
   </div>
 
+  <!-- Top 5 Standings Board -->
   <div id="leaderboard">
     <div class="lb-header">TOP 5 STANDINGS</div>
     <div id="lb-rows"></div>
@@ -193,17 +223,14 @@
         if (type === 'UPDATE_PULLER') {
           leaderboard.classList.remove('visible');
 
-          // Top Line: Vehicle Name
           document.getElementById('vehicleName').innerText = payload.vehicle ? payload.vehicle.toUpperCase() : '';
 
-          // Bottom Line: Driver Name & Hometown
           let driverText = payload.driver ? payload.driver.toUpperCase() : '';
           if (payload.hometown) {
             driverText += ` — ${payload.hometown.toUpperCase()}`;
           }
           document.getElementById('driverDetails').innerText = driverText;
 
-          // Distance logic
           const distVal = payload.distance !== null && payload.distance !== undefined ? String(payload.distance).trim() : '';
           
           if (distVal !== '' && distVal !== '0') {
