@@ -76,7 +76,7 @@
     .btn-secondary { background: #3a3a3a; border: 1px solid var(--border); }
     .btn-secondary:hover { background: #4a4a4a; }
 
-    .puller-row, .leaderboard-bar-wrapper {
+    .puller-row, .leaderboard-bar-wrapper, .manual-bar-wrapper {
       position: relative;
       background: #262626;
       border: 1px solid var(--border);
@@ -98,7 +98,7 @@
       transition: width 0.1s linear;
     }
 
-    .row-left { display: flex; align-items: center; gap: 15px; z-index: 1; }
+    .row-left { display: flex; align-items: center; gap: 15px; z-index: 1; flex-grow: 1; }
     .row-right { display: flex; align-items: center; gap: 10px; z-index: 1; }
 
     .switch {
@@ -179,6 +179,14 @@
       margin-left: 8px;
       text-transform: uppercase;
     }
+
+    .manual-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 500px;
+    }
   </style>
 </head>
 <body>
@@ -193,6 +201,40 @@
     <div style="display: flex; gap: 10px; align-items: center;">
       <label><small>Channel Key:</small></label>
       <input type="text" id="channelId" value="pulling_event_default_channel" onchange="initMQTT()" style="width: 200px;">
+    </div>
+  </div>
+
+  <!-- Panel 0: Event & Announcer Lower Third Controls -->
+  <div class="card">
+    <h3>Panel 0: Broadcast Banners (Event & Announcer)</h3>
+    
+    <!-- Event Banner (2 Fields) -->
+    <div class="manual-bar-wrapper">
+      <div class="timer-bar" id="bar-event"></div>
+      <div class="row-left">
+        <label class="switch">
+          <input type="checkbox" id="toggle-event" onchange="handleManualToggle('event', 2)">
+          <span class="slider"></span>
+        </label>
+        <div class="manual-inputs">
+          <input type="text" id="eventLine1" placeholder="Event Title / Main Header (e.g. FAYETTE COUNTY FAIR)" oninput="saveManualInputs()">
+          <input type="text" id="eventLine2" placeholder="Sub-header / Sponsor (e.g. PRESENTED BY SMOG MEDIA)" oninput="saveManualInputs()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Announcer Banner (1 Field) -->
+    <div class="manual-bar-wrapper" style="margin-bottom: 0;">
+      <div class="timer-bar" id="bar-announcer"></div>
+      <div class="row-left">
+        <label class="switch">
+          <input type="checkbox" id="toggle-announcer" onchange="handleManualToggle('announcer', 1)">
+          <span class="slider"></span>
+        </label>
+        <div class="manual-inputs">
+          <input type="text" id="announcerLine1" placeholder="Announcer Name (e.g. ANNOUNCER: JOHN DOE)" oninput="saveManualInputs()">
+        </div>
+      </div>
     </div>
   </div>
 
@@ -292,12 +334,94 @@
   let client = null;
   let topic = '';
   let pullers = [];
-  let overridePullers = null; // Holds manual TSV override array if active
+  let overridePullers = null;
   let timerIntervals = {};
 
   const STORAGE_KEY_PULLERS = 'smog_pullers_data_v1';
   const STORAGE_KEY_TSV = 'smog_tsv_raw_text_v1';
   const STORAGE_KEY_OVERRIDE = 'smog_leaderboard_override_v1';
+  const STORAGE_KEY_MANUAL_INPUTS = 'smog_manual_inputs_v1';
+
+  function saveManualInputs() {
+    const data = {
+      eventLine1: document.getElementById('eventLine1').value,
+      eventLine2: document.getElementById('eventLine2').value,
+      announcerLine1: document.getElementById('announcerLine1').value
+    };
+    localStorage.setItem(STORAGE_KEY_MANUAL_INPUTS, JSON.stringify(data));
+  }
+
+  function loadManualInputs() {
+    const saved = localStorage.getItem(STORAGE_KEY_MANUAL_INPUTS);
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        document.getElementById('eventLine1').value = data.eventLine1 || '';
+        document.getElementById('eventLine2').value = data.eventLine2 || '';
+        document.getElementById('announcerLine1').value = data.announcerLine1 || '';
+      } catch(e) {}
+    }
+  }
+
+  function handleManualToggle(type, fieldsCount) {
+    const toggle = document.getElementById(`toggle-${type}`);
+    const timerBar = document.getElementById(`bar-${type}`);
+
+    const lbToggle = document.getElementById('lbToggle');
+    if (toggle.checked && lbToggle.checked) {
+      lbToggle.checked = false;
+    }
+
+    if (timerIntervals[type]) {
+      clearInterval(timerIntervals[type]);
+      timerBar.style.width = '0%';
+    }
+
+    if (toggle.checked) {
+      if (type === 'event') document.getElementById('toggle-announcer').checked = false;
+      if (type === 'announcer') document.getElementById('toggle-event').checked = false;
+      pullers.forEach(p => {
+        const el = document.getElementById(`toggle-${p.id}`);
+        if (el) el.checked = false;
+      });
+
+      const line1 = fieldsCount === 2 ? document.getElementById('eventLine1').value : document.getElementById('announcerLine1').value;
+      const line2 = fieldsCount === 2 ? document.getElementById('eventLine2').value : '';
+
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({
+          type: 'UPDATE_PULLER',
+          payload: { vehicle: line1, driver: line2, hometown: '', distance: null }
+        }));
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
+      }
+
+      let elapsed = 0;
+      const totalTime = 10000;
+      const intervalTime = 100;
+
+      timerIntervals[type] = setInterval(() => {
+        elapsed += intervalTime;
+        const percentage = (elapsed / totalTime) * 100;
+        timerBar.style.width = `${percentage}%`;
+
+        if (elapsed >= totalTime) {
+          clearInterval(timerIntervals[type]);
+          toggle.checked = false;
+          timerBar.style.width = '0%';
+          
+          if (client && client.connected) {
+            client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+          }
+        }
+      }, intervalTime);
+
+    } else {
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+      }
+    }
+  }
 
   function addCustomClass() {
     const input = prompt("Enter custom class name:");
@@ -344,6 +468,8 @@
   }
 
   function loadSavedData() {
+    loadManualInputs();
+
     const savedTSV = localStorage.getItem(STORAGE_KEY_TSV);
     if (savedTSV) {
       document.getElementById('tsvInput').value = savedTSV;
@@ -433,7 +559,6 @@
     updateLeaderboard();
   }
 
-  /* Manual Leaderboard Override TSV Logic */
   function applyOverride() {
     const rawOverride = document.getElementById('tsvOverrideInput').value;
     if (!rawOverride.trim()) {
@@ -485,9 +610,13 @@
       localStorage.removeItem(STORAGE_KEY_PULLERS);
       localStorage.removeItem(STORAGE_KEY_TSV);
       localStorage.removeItem(STORAGE_KEY_OVERRIDE);
+      localStorage.removeItem(STORAGE_KEY_MANUAL_INPUTS);
       
       document.getElementById('tsvInput').value = '';
       document.getElementById('tsvOverrideInput').value = '';
+      document.getElementById('eventLine1').value = '';
+      document.getElementById('eventLine2').value = '';
+      document.getElementById('announcerLine1').value = '';
       document.getElementById('overrideBadge').style.display = 'none';
       
       pullers = [];
@@ -567,6 +696,9 @@
     }
 
     if (toggle.checked) {
+      document.getElementById('toggle-event').checked = false;
+      document.getElementById('toggle-announcer').checked = false;
+
       const p = pullers.find(item => item.id === id);
       const rawDist = document.getElementById(`dist-${id}`).value.trim();
       const distVal = (rawDist === '' || rawDist === '0') ? null : rawDist;
@@ -607,12 +739,10 @@
   }
 
   function getLeaderboardData() {
-    // If manual TSV override exists, use it exclusively
     if (overridePullers && overridePullers.length > 0) {
       return overridePullers;
     }
 
-    // Default: Sort Panel 2 pullers by calculated distance
     return pullers
       .filter(p => p.distance !== null && p.distance > 0)
       .sort((a, b) => b.distance - a.distance)
