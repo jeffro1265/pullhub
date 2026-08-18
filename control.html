@@ -1,16 +1,3 @@
-Here is the updated `control.html` code with an **Event Info & Announcer Section** added directly above Panel 1.
-
-### What Was Added
-
-* **Event Info Controls:** Individual 10-second lower-third triggers for Line 1 (Event Name/Location) and Line 2 (Sub-header/Sponsors).
-* **Announcer Controls:** Individual 10-second lower-third triggers for Line 1 (Announcer Name) and Line 2 (Role/Affiliation).
-* **Native Payload Formatting:** Formatted to send standard `UPDATE_PULLER` and `TOGGLE_VISIBILITY` MQTT messages using your existing lower-third payload structure (mapping Line 1 to `vehicle` and Line 2 to `driver`) so no `overlay.html` changes are required.
-
----
-
-### Updated `control.html`
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -831,5 +818,3 @@ Here is the updated `control.html` code with an **Event Info & Announcer Section
 
 </body>
 </html>
-
-```
