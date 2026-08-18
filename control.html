@@ -9,7 +9,7 @@
     :root {
       --bg: #121212;
       --panel: #1e1e1e;
-      --accent: #e63946;
+      --accent: #35558F;
       --accent-green: #2ec4b6;
       --text: #ffffff;
       --subtext: #aaaaaa;
@@ -37,7 +37,7 @@
     .status-bar { display: flex; align-items: center; gap: 10px; font-size: 14px; }
     .indicator { width: 12px; height: 12px; border-radius: 50%; background: #777; }
     .indicator.connected { background: var(--accent-green); }
-    .indicator.disconnected { background: var(--accent); }
+    .indicator.disconnected { background: #d62828; }
 
     .card {
       background: var(--panel);
@@ -49,7 +49,7 @@
 
     h3 { margin-top: 0; }
 
-    input[type="text"], textarea {
+    input[type="text"], select, textarea {
       width: 100%;
       background: #2a2a2a;
       border: 1px solid var(--border);
@@ -57,9 +57,9 @@
       padding: 10px;
       border-radius: 4px;
       box-sizing: border-box;
-      font-family: monospace;
+      font-family: inherit;
     }
-    textarea { height: 120px; resize: vertical; }
+    textarea { height: 120px; resize: vertical; font-family: monospace; }
 
     button {
       background: var(--accent);
@@ -95,7 +95,7 @@
       right: 0;
       bottom: 0;
       width: 0%;
-      background: rgba(230, 57, 70, 0.35);
+      background: rgba(53, 85, 143, 0.4);
       pointer-events: none;
       transition: width 0.1s linear;
     }
@@ -149,6 +149,17 @@
       gap: 10px;
       margin-top: 15px;
     }
+
+    .class-selector-box {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      background: #262626;
+      padding: 12px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 <body>
@@ -184,6 +195,24 @@
 
   <div class="card">
     <h3>Panel 3: Leaderboard Standings</h3>
+
+    <div class="class-selector-box">
+      <label for="classSelect"><strong>Filter Leaderboard Class:</strong></label>
+      <select id="classSelect" onchange="updateLeaderboard()">
+        <option value="ALL">ALL CLASSES</option>
+        <option value="LIGHT PRO STOCK">LIGHT PRO STOCK</option>
+        <option value="LIMITED PRO STOCK">LIMITED PRO STOCK</option>
+        <option value="PRO STOCK">PRO STOCK</option>
+        <option value="SUPER STOCK DIESEL">SUPER STOCK DIESEL</option>
+        <option value="SUPER STOCK OPEN">SUPER STOCK OPEN</option>
+        <option value="MODIFIED UNLIMITED">MODIFIED UNLIMITED</option>
+        <option value="MINI MODIFIED">MINI MODIFIED</option>
+        <option value="TWO WHEEL DRIVE">TWO WHEEL DRIVE</option>
+        <option value="FOUR WHEEL DRIVE">FOUR WHEEL DRIVE</option>
+        <option value="SUPER SEMI">SUPER SEMI</option>
+        <option value="PRO STOCK DIESEL TRUCK">PRO STOCK DIESEL TRUCK</option>
+      </select>
+    </div>
     
     <div class="leaderboard-bar-wrapper">
       <div class="row-left">
@@ -192,7 +221,7 @@
           <span class="slider"></span>
         </label>
         <div>
-          <strong>Show Leaderboard</strong><br>
+          <strong id="lbTitleText">Show Standings Overlay</strong><br>
           <small style="color: var(--subtext);">Manual toggle — stays on-screen until switched off</small>
         </div>
       </div>
@@ -355,7 +384,7 @@
           </label>
           <div>
             <strong>${p.driver}</strong> — ${p.vehicle}<br>
-            <small style="color: var(--subtext);">${p.hometown || 'N/A'}</small>
+            <small style="color: var(--subtext);">${p.hometown || 'N/A'} | Class: ${p.pullClass}</small>
           </div>
         </div>
         <div class="row-right">
@@ -435,17 +464,32 @@
     }
   }
 
-  function updateLeaderboard() {
-    const sorted = [...pullers]
-      .filter(p => p.distance !== null && p.distance > 0)
+  function getFilteredLeaderboard() {
+    const selectedClass = document.getElementById('classSelect').value;
+    
+    return pullers
+      .filter(p => {
+        const hasDist = p.distance !== null && p.distance > 0;
+        if (!hasDist) return false;
+        if (selectedClass === 'ALL') return true;
+        return p.pullClass && p.pullClass.toUpperCase() === selectedClass.toUpperCase();
+      })
       .sort((a, b) => b.distance - a.distance)
       .slice(0, 5);
+  }
 
+  function updateLeaderboard() {
+    const selectedClass = document.getElementById('classSelect').value;
+    const classNameText = selectedClass === 'ALL' ? '' : `${selectedClass} `;
+    
+    document.getElementById('lbTitleText').innerText = `Show ${classNameText}Standings Overlay`;
+
+    const sorted = getFilteredLeaderboard();
     const tbody = document.getElementById('leaderboardBody');
     tbody.innerHTML = '';
 
     if (sorted.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--subtext);">No distance results recorded yet. Enter distances in Panel 2.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--subtext);">No distance results recorded for this class.</td></tr>`;
       return;
     }
 
@@ -465,6 +509,7 @@
     if (lbToggle.checked && client && client.connected) {
       client.publish(topic, JSON.stringify({
         type: 'UPDATE_LEADERBOARD',
+        className: classNameText.trim(),
         payload: sorted
       }));
     }
@@ -474,14 +519,14 @@
     const toggle = document.getElementById('lbToggle');
 
     if (toggle.checked) {
-      const sorted = [...pullers]
-        .filter(p => p.distance !== null && p.distance > 0)
-        .sort((a, b) => b.distance - a.distance)
-        .slice(0, 5);
+      const selectedClass = document.getElementById('classSelect').value;
+      const classNameText = selectedClass === 'ALL' ? '' : `${selectedClass} `;
+      const sorted = getFilteredLeaderboard();
 
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({
           type: 'UPDATE_LEADERBOARD',
+          className: classNameText.trim(),
           payload: sorted
         }));
       }
