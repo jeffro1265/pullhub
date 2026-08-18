@@ -104,7 +104,7 @@
       box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4);
     }
 
-    /* Centered Standings Leaderboard */
+    /* Centered Results Overlay */
     #leaderboard {
       position: absolute;
       top: 50%;
@@ -177,15 +177,17 @@
       padding-left: 10px;
     }
 
-    .lb-driver {
-      font-weight: 800;
+    /* Vehicle Name: Larger Font */
+    .lb-vehicle {
       font-size: 22px;
+      font-weight: 800;
       color: #ffffff;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    .lb-vehicle {
+    /* Driver Name: Smaller Font Below */
+    .lb-driver {
       font-size: 16px;
       font-weight: 600;
       color: rgba(255, 255, 255, 0.85);
@@ -219,11 +221,11 @@
     <div class="distance-tag" id="distance"></div>
   </div>
 
-  <!-- Centered Standings Leaderboard -->
+  <!-- Centered Results Board -->
   <div id="leaderboard">
     <div class="lb-header">
       <img src="logo.png" alt="OSTPA Logo">
-      <div class="lb-header-text" id="lbTitle">TOP 5 STANDINGS</div>
+      <div class="lb-header-text" id="lbTitle">TOP 5 RESULTS</div>
     </div>
     <div id="lb-rows"></div>
   </div>
@@ -248,7 +250,7 @@
     client.on('message', (t, message) => {
       try {
         const data = JSON.parse(message.toString());
-        const { type, payload, visible, className } = data;
+        const { type, payload, visible, classHeader } = data;
 
         if (type === 'UPDATE_PULLER') {
           leaderboard.classList.remove('visible');
@@ -285,11 +287,8 @@
           lowerThird.classList.remove('visible');
           
           const lbTitle = document.getElementById('lbTitle');
-          if (className && className.trim() !== '') {
-            lbTitle.innerText = `${className.toUpperCase()} STANDINGS`;
-          } else {
-            lbTitle.innerText = 'TOP 5 STANDINGS';
-          }
+          const headerLabel = classHeader ? classHeader.toUpperCase().trim() : 'TOP 5';
+          lbTitle.innerText = `${headerLabel} RESULTS`;
 
           const lbRows = document.getElementById('lb-rows');
           lbRows.innerHTML = '';
@@ -303,8 +302,8 @@
             row.innerHTML = `
               <div class="lb-rank">#${idx + 1}</div>
               <div class="lb-details">
-                <div class="lb-driver">${p.driver.toUpperCase()}</div>
                 <div class="lb-vehicle">${p.vehicle.toUpperCase()}</div>
+                <div class="lb-driver">${p.driver.toUpperCase()}</div>
               </div>
               <div class="lb-distance">${distDisplay} FT</div>
             `;
