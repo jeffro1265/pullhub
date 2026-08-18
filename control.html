@@ -393,7 +393,7 @@
             <span class="slider"></span>
           </label>
           <div>
-            <strong>${p.driver}</strong> — ${p.vehicle}<br>
+            <strong>${p.driver}</strong> — "${p.vehicle}"<br>
             <small style="color: var(--subtext);">${p.hometown || 'N/A'}</small>
           </div>
         </div>
@@ -499,7 +499,7 @@
       tr.innerHTML = `
         <td class="rank-cell">#${idx + 1}</td>
         <td><strong>${p.driver}</strong></td>
-        <td>${p.vehicle}</td>
+        <td>"${p.vehicle}"</td>
         <td>${p.pullClass || '—'}</td>
         <td><strong style="color: var(--accent-green);">${Number(p.distance).toFixed(2)} FT</strong></td>
       `;
