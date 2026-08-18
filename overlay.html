@@ -13,26 +13,26 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* Centered Lower Third (33.33% Width) */
+    /* Centered Lower Third (50% Scaled Up) */
     #lower-third {
       position: absolute;
       bottom: 50px;
       left: 50%;
-      width: 33.33vw;
-      min-width: 600px; /* Ensures text doesn't wrap on lower-res viewports */
+      width: 50vw;
+      min-width: 850px;
       box-sizing: border-box;
-      padding: 12px 24px;
+      padding: 18px 36px;
       background: linear-gradient(to bottom, #35558F, #1c3054);
-      border: 2px solid rgba(255, 255, 255, 0.25);
-      border-radius: 8px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      border-radius: 12px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
       
       display: flex;
       align-items: center;
-      gap: 18px;
+      gap: 26px;
 
       opacity: 0;
-      transform: translate(-50%, 40px); /* Center aligned + transition off-screen */
+      transform: translate(-50%, 60px);
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
@@ -41,7 +41,7 @@
       transform: translate(-50%, 0);
     }
 
-    /* Embedded Left Logo */
+    /* Logo (Scaled Up) */
     .logo-container {
       flex-shrink: 0;
       display: flex;
@@ -50,109 +50,117 @@
     }
 
     .logo-container img {
-      height: 70px;
+      height: 105px;
       width: auto;
       object-fit: contain;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
     }
 
     .info-container {
       flex-grow: 1;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 4px;
       overflow: hidden;
     }
 
-    /* Vehicle Name (Top, Larger) */
+    /* Vehicle Name (Scaled Up) */
     .vehicle-info {
-      font-size: 30px;
+      font-size: 45px;
       font-weight: 900;
       color: #ffffff;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 1px;
       line-height: 1.1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      text-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
     }
 
-    /* Driver Name & Hometown (Bottom) */
+    /* Driver Name & Hometown (Scaled Up) */
     .driver-info {
-      font-size: 18px;
+      font-size: 27px;
       font-weight: 600;
       color: #ffffff;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
       opacity: 0.95;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
     }
 
-    /* Distance Badge (Right-Aligned) */
+    /* Distance Badge (Scaled Up) */
     .distance-tag {
-      font-size: 30px;
+      font-size: 45px;
       font-weight: 800;
       color: #ffffff;
       background: rgba(0, 0, 0, 0.4);
-      padding: 6px 14px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
       text-align: center;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       display: none;
       flex-shrink: 0;
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+      box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4);
     }
 
-    /* Top 5 Standings Overlay */
+    /* Centered Top 5 Leaderboard (Matching Theme) */
     #leaderboard {
       position: absolute;
-      top: 60px;
-      right: 60px;
-      width: 480px;
-      background: rgba(18, 18, 18, 0.95);
-      border-radius: 8px;
-      border: 1px solid #333;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      top: 50%;
+      left: 50%;
+      width: 650px;
+      background: linear-gradient(to bottom, #35558F, #1c3054);
+      border-radius: 12px;
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
       overflow: hidden;
       opacity: 0;
-      transform: translateX(50px);
-      transition: all 0.4s ease-in-out;
+      transform: translate(-50%, -40%);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     #leaderboard.visible {
       opacity: 1;
-      transform: translateX(0);
+      transform: translate(-50%, -50%);
     }
 
     .lb-header {
-      background: #35558F;
-      color: #fff;
-      padding: 12px 20px;
-      font-size: 24px;
-      font-weight: bold;
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+      padding: 16px 24px;
+      font-size: 28px;
+      font-weight: 900;
       text-align: center;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
 
     .lb-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 18px;
-      border-bottom: 1px solid #2a2a2a;
+      padding: 14px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .lb-row:last-child {
+      border-bottom: none;
     }
 
     .lb-rank {
-      font-size: 22px;
-      font-weight: bold;
-      color: #35558F;
-      width: 35px;
+      font-size: 28px;
+      font-weight: 900;
+      color: #ffffff;
+      width: 55px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
 
     .lb-details {
@@ -161,20 +169,29 @@
     }
 
     .lb-driver {
-      font-weight: bold;
-      font-size: 16px;
-      color: #fff;
+      font-weight: 800;
+      font-size: 20px;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .lb-vehicle {
-      font-size: 13px;
-      color: #aaa;
+      font-size: 15px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
+      text-transform: uppercase;
     }
 
     .lb-distance {
-      font-size: 22px;
-      font-weight: bold;
-      color: #2ec4b6;
+      font-size: 26px;
+      font-weight: 800;
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      letter-spacing: 0.5px;
     }
   </style>
 </head>
@@ -192,7 +209,7 @@
     <div class="distance-tag" id="distance"></div>
   </div>
 
-  <!-- Top 5 Standings Board -->
+  <!-- Centered Top 5 Standings Board -->
   <div id="leaderboard">
     <div class="lb-header">TOP 5 STANDINGS</div>
     <div id="lb-rows"></div>
