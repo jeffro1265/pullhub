@@ -2,337 +2,322 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OBS Broadcast Overlay</title>
+  <title>Pulling Broadcast Graphic Overlay</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
+    :root {
+      --bg-dark: rgba(18, 18, 18, 0.92);
+      --accent-blue: #35558F;
+      --accent-green: #2ec4b6;
+      --text-main: #ffffff;
+      --text-sub: #cccccc;
+      --border-color: #444444;
+    }
+
     body {
       margin: 0;
       padding: 0;
+      width: 1920px;
+      height: 1080px;
       overflow: hidden;
-      background: transparent;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: transparent;
+      color: var(--text-main);
     }
 
-    /* Dynamic Lower Third Banner */
-    #lower-third {
+    /* ==========================================
+       1. LOWER THIRD OVERLAY (Bottom Left)
+       ========================================== */
+    #lowerThird {
       position: absolute;
-      bottom: 50px;
-      left: 50%;
-      
-      width: max-content;
-      max-width: 85vw;
-      box-sizing: border-box;
-      
-      padding: 18px 36px;
-      background: linear-gradient(to bottom, #35558F, #1c3054);
-      border: 3px solid rgba(255, 255, 255, 0.25);
-      border-radius: 12px;
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
-      
-      display: flex;
-      align-items: center;
-      gap: 26px;
-
-      opacity: 0;
-      transform: translate(-50%, 60px);
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    #lower-third.visible {
-      opacity: 1;
-      transform: translate(-50%, 0);
-    }
-
-    .logo-container {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .logo-container img {
-      height: 105px;
-      width: auto;
-      object-fit: contain;
-      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
-    }
-
-    .info-container {
+      bottom: 60px;
+      left: 60px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      overflow: hidden;
-      min-width: 0;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
     }
 
-    .vehicle-info {
-      font-size: 45px;
-      font-weight: 900;
-      color: #ffffff;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      line-height: 1.1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
+    #lowerThird.visible {
+      opacity: 1;
+      transform: translateY(0);
     }
 
-    .driver-info {
-      font-size: 27px;
-      font-weight: 600;
-      color: #ffffff;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      opacity: 0.95;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+    .lt-card {
+      background: var(--bg-dark);
+      border-left: 8px solid var(--accent-blue);
+      border-radius: 0 8px 8px 0;
+      padding: 16px 28px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      min-width: 400px;
+      max-width: 700px;
     }
 
-    .distance-tag {
-      font-size: 45px;
+    .lt-title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 15px;
+    }
+
+    .lt-primary {
+      font-size: 32px;
       font-weight: 800;
-      color: #ffffff;
-      background: rgba(0, 0, 0, 0.4);
-      padding: 8px 20px;
-      border-radius: 8px;
-      border: 2px solid rgba(255, 255, 255, 0.25);
-      text-align: center;
-      letter-spacing: 1.5px;
-      display: none;
-      flex-shrink: 0;
-      box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-main);
     }
 
-    /* Dynamic Centered Results Board */
-    #leaderboard {
+    .lt-secondary {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--accent-green);
+    }
+
+    .lt-sub-row {
+      font-size: 20px;
+      color: var(--text-sub);
+      margin-top: 4px;
+      font-weight: 400;
+    }
+
+    .lt-distance-badge {
+      display: inline-block;
+      margin-top: 8px;
+      background: var(--accent-green);
+      color: #000000;
+      font-size: 22px;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 4px;
+    }
+
+
+    /* ==========================================
+       2. LEADERBOARD OVERLAY (Scaled 50%)
+       ========================================== */
+    #leaderboardContainer {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      
-      width: fit-content;
-      min-width: 650px;
-      max-width: 90vw;
-      
-      background: linear-gradient(to bottom, #35558F, #1c3054);
+      top: 50px;
+      right: 50px;
+      width: 500px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
-      border: 3px solid rgba(255, 255, 255, 0.25);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.6);
       overflow: hidden;
       opacity: 0;
-      transform: translate(-50%, -40%);
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      
+      /* --- 50% SCALING APPLIED HERE --- */
+      transform: scale(0.5);
+      transform-origin: top right;
+      transition: opacity 0.4s ease-in-out, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    #leaderboard.visible {
+    /* When visible, keep scale at 0.5 while fading in */
+    #leaderboardContainer.visible {
       opacity: 1;
-      transform: translate(-50%, -50%);
+      transform: scale(0.5) translateY(0);
     }
 
     .lb-header {
-      background: rgba(0, 0, 0, 0.25);
-      color: #ffffff;
-      padding: 18px 28px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.15);
-    }
-
-    .lb-header img {
-      height: 70px;
-      width: auto;
-      object-fit: contain;
-      flex-shrink: 0;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-    }
-
-    .lb-header-text {
-      font-size: clamp(22px, 3.2vw, 36px);
-      font-weight: 900;
+      background: var(--accent-blue);
+      color: var(--text-main);
+      padding: 16px 20px;
+      font-size: 22px;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1.2px;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-      line-height: 1.1;
-      white-space: nowrap;
-      flex-grow: 1;
+      letter-spacing: 1px;
+      text-align: center;
+      border-bottom: 2px solid rgba(255,255,255,0.1);
     }
 
-    .lb-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 30px;
-      padding: 14px 28px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(0, 0, 0, 0.1);
+    .lb-table {
+      width: 100%;
+      border-collapse: collapse;
     }
 
-    .lb-row:last-child {
+    .lb-table tr {
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .lb-table tr:last-child {
       border-bottom: none;
     }
 
+    .lb-table td {
+      padding: 12px 18px;
+      font-size: 18px;
+    }
+
     .lb-rank {
-      font-size: 28px;
-      font-weight: 900;
-      color: #ffffff;
-      width: 45px;
-      flex-shrink: 0;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      font-weight: 800;
+      color: var(--accent-green);
+      width: 40px;
+      font-size: 20px;
     }
 
     .lb-details {
-      flex-grow: 1;
-      white-space: nowrap;
-    }
-
-    .lb-vehicle {
-      font-size: 22px;
-      font-weight: 800;
-      color: #ffffff;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      display: flex;
+      flex-direction: column;
     }
 
     .lb-driver {
-      font-size: 16px;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.85);
-      text-transform: uppercase;
-      margin-top: 2px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .lb-vehicle {
+      font-size: 15px;
+      color: var(--text-sub);
     }
 
     .lb-distance {
-      font-size: 26px;
+      text-align: right;
       font-weight: 800;
-      color: #ffffff;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 6px 16px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      letter-spacing: 0.5px;
-      flex-shrink: 0;
+      color: var(--accent-green);
       white-space: nowrap;
+      font-size: 20px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Dynamic Centered Lower Third Banner -->
-  <div id="lower-third">
-    <div class="logo-container">
-      <img src="logo.png" alt="OSTPA Logo">
+  <!-- Lower Third Banner -->
+  <div id="lowerThird">
+    <div class="lt-card">
+      <div class="lt-title-row">
+        <span id="ltPrimary" class="lt-primary">---</span>
+        <span id="ltSecondary" class="lt-secondary"></span>
+      </div>
+      <div id="ltSubRow" class="lt-sub-row"></div>
+      <div id="ltDistance" class="lt-distance-badge" style="display: none;"></div>
     </div>
-    <div class="info-container">
-      <div class="vehicle-info" id="vehicleName">"VEHICLE NAME"</div>
-      <div class="driver-info" id="driverDetails">DRIVER NAME</div>
-    </div>
-    <div class="distance-tag" id="distance"></div>
   </div>
 
-  <!-- Dynamic Centered Results Board -->
-  <div id="leaderboard">
-    <div class="lb-header">
-      <img src="logo.png" alt="OSTPA Logo">
-      <div class="lb-header-text" id="lbTitle">TOP 5 RESULTS</div>
-    </div>
-    <div id="lb-rows"></div>
+  <!-- Leaderboard Table Graphic (Scaled to 50%) -->
+  <div id="leaderboardContainer">
+    <div id="lbHeader" class="lb-header">TOP STANDINGS</div>
+    <table class="lb-table">
+      <tbody id="lbBody">
+        <!-- Rows dynamically injected via MQTT -->
+      </tbody>
+    </table>
   </div>
 
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const channelName = urlParams.get('channel') || 'pulling_event_default_channel';
-    const topic = `smog_media_pulling/${channelName}/control`;
+<script>
+  let client = null;
 
-    const lowerThird = document.getElementById('lower-third');
-    const leaderboard = document.getElementById('leaderboard');
-    const distanceEl = document.getElementById('distance');
+  // Retrieve channel key from URL parameter (e.g. overlay.html?channel=my_event)
+  const urlParams = new URLSearchParams(window.location.search);
+  const channelName = urlParams.get('channel') || 'pulling_event_default_channel';
+  const topic = `smog_media_pulling/${channelName}/control`;
 
-    const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-      clientId: 'obs_overlay_' + Math.random().toString(16).substr(2, 8)
+  function initMQTT() {
+    client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+      clientId: 'ovl_' + Math.random().toString(16).substr(2, 8)
     });
 
     client.on('connect', () => {
+      console.log('Overlay connected to MQTT topic:', topic);
       client.subscribe(topic);
     });
 
     client.on('message', (t, message) => {
       try {
         const data = JSON.parse(message.toString());
-        const { type, payload, visible, classHeader } = data;
-
-        if (type === 'UPDATE_PULLER') {
-          leaderboard.classList.remove('visible');
-
-          const vName = payload.vehicle ? payload.vehicle.toUpperCase() : '';
-          document.getElementById('vehicleName').innerText = vName ? `"${vName}"` : '';
-
-          let driverText = payload.driver ? payload.driver.toUpperCase() : '';
-          if (payload.hometown) {
-            driverText += ` — ${payload.hometown.toUpperCase()}`;
-          }
-          document.getElementById('driverDetails').innerText = driverText;
-
-          const distVal = payload.distance !== null && payload.distance !== undefined ? String(payload.distance).trim() : '';
-          
-          if (distVal !== '' && distVal !== '0') {
-            distanceEl.innerText = `${distVal} FT`;
-            distanceEl.style.display = 'block';
-          } else {
-            distanceEl.innerText = '';
-            distanceEl.style.display = 'none';
-          }
-        }
-
-        if (type === 'TOGGLE_VISIBILITY') {
-          if (visible) {
-            leaderboard.classList.remove('visible');
-            lowerThird.classList.add('visible');
-          } else {
-            lowerThird.classList.remove('visible');
-          }
-        }
-
-        if (type === 'UPDATE_LEADERBOARD') {
-          lowerThird.classList.remove('visible');
-          
-          const lbTitle = document.getElementById('lbTitle');
-          const headerLabel = classHeader ? classHeader.toUpperCase().trim() : 'TOP 5';
-          lbTitle.innerText = `${headerLabel} RESULTS`;
-
-          const lbRows = document.getElementById('lb-rows');
-          lbRows.innerHTML = '';
-
-          payload.forEach((p, idx) => {
-            const distNum = parseFloat(p.distance);
-            const distDisplay = isNaN(distNum) ? p.distance : distNum.toFixed(2);
-            
-            const row = document.createElement('div');
-            row.className = 'lb-row';
-            row.innerHTML = `
-              <div class="lb-rank">#${idx + 1}</div>
-              <div class="lb-details">
-                <div class="lb-vehicle">"${p.vehicle.toUpperCase()}"</div>
-                <div class="lb-driver">${p.driver.toUpperCase()}</div>
-              </div>
-              <div class="lb-distance">${distDisplay} FT</div>
-            `;
-            lbRows.appendChild(row);
-          });
-
-          leaderboard.classList.add('visible');
-        }
-
-        if (type === 'HIDE_LEADERBOARD') {
-          leaderboard.classList.remove('visible');
-        }
-
+        handleBroadcastEvent(data);
       } catch (e) {
-        console.error("Failed to parse incoming WS message:", e);
+        console.error('Error parsing MQTT payload:', e);
       }
     });
-  </script>
+  }
+
+  function handleBroadcastEvent(data) {
+    switch (data.type) {
+      case 'UPDATE_PULLER':
+        renderLowerThird(data.payload);
+        break;
+
+      case 'TOGGLE_VISIBILITY':
+        const lt = document.getElementById('lowerThird');
+        if (data.visible) {
+          lt.classList.add('visible');
+        } else {
+          lt.classList.remove('visible');
+        }
+        break;
+
+      case 'UPDATE_LEADERBOARD':
+        renderLeaderboard(data.classHeader, data.payload);
+        document.getElementById('leaderboardContainer').classList.add('visible');
+        break;
+
+      case 'HIDE_LEADERBOARD':
+        document.getElementById('leaderboardContainer').classList.remove('visible');
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  function renderLowerThird(payload) {
+    if (!payload) return;
+
+    const primary = document.getElementById('ltPrimary');
+    const secondary = document.getElementById('ltSecondary');
+    const subRow = document.getElementById('ltSubRow');
+    const distBadge = document.getElementById('ltDistance');
+
+    // Mapped for standard participants, event info, and announcer lower thirds
+    primary.innerText = payload.vehicle || payload.driver || '';
+    secondary.innerText = payload.vehicle && payload.driver ? payload.driver : '';
+    subRow.innerText = payload.hometown || payload.pullClass || '';
+
+    if (payload.distance && payload.distance !== 'null' && payload.distance !== '0') {
+      const formattedDist = typeof payload.distance === 'number' ? payload.distance.toFixed(2) : payload.distance;
+      distBadge.innerText = `${formattedDist} FT`;
+      distBadge.style.display = 'inline-block';
+    } else {
+      distBadge.style.display = 'none';
+    }
+  }
+
+  function renderLeaderboard(headerText, rows) {
+    const lbHeader = document.getElementById('lbHeader');
+    const lbBody = document.getElementById('lbBody');
+
+    lbHeader.innerText = headerText ? `${headerText} STANDINGS` : 'STANDINGS';
+    lbBody.innerHTML = '';
+
+    if (!rows || rows.length === 0) {
+      lbBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px; color: var(--text-sub);">No Results Recorded</td></tr>';
+      return;
+    }
+
+    rows.forEach((row, idx) => {
+      const tr = document.createElement('tr');
+      const distFormatted = typeof row.distance === 'number' ? row.distance.toFixed(2) : row.distance;
+
+      tr.innerHTML = `
+        <td class="lb-rank">#${idx + 1}</td>
+        <td>
+          <div class="lb-details">
+            <span class="lb-driver">${row.driver || 'N/A'}</span>
+            <span class="lb-vehicle">"${row.vehicle || 'N/A'}"</span>
+          </div>
+        </td>
+        <td class="lb-distance">${distFormatted} FT</td>
+      `;
+      lbBody.appendChild(tr);
+    });
+  }
+
+  initMQTT();
+</script>
+
 </body>
 </html>
