@@ -280,7 +280,6 @@
       <button onclick="addCustomClass()" style="white-space: nowrap; flex-shrink: 0;">+ Custom Class</button>
     </div>
 
-    <!-- Manual Leaderboard TSV Bypass Area -->
     <div class="override-box">
       <label style="display: block; margin-bottom: 6px;">
         <strong>Manual Leaderboard TSV Bypass (Overrides Panel 2)</strong>
@@ -367,6 +366,7 @@
     const toggle = document.getElementById(`toggle-${type}`);
     const timerBar = document.getElementById(`bar-${type}`);
 
+    // Untoggle leaderboard if toggled
     const lbToggle = document.getElementById('lbToggle');
     if (toggle.checked && lbToggle.checked) {
       lbToggle.checked = false;
@@ -378,6 +378,7 @@
     }
 
     if (toggle.checked) {
+      // Untoggle other lower third toggles
       if (type === 'event') document.getElementById('toggle-announcer').checked = false;
       if (type === 'announcer') document.getElementById('toggle-event').checked = false;
       pullers.forEach(p => {
@@ -469,7 +470,7 @@
 
   function loadSavedData() {
     loadManualInputs();
-
+    
     const savedTSV = localStorage.getItem(STORAGE_KEY_TSV);
     if (savedTSV) {
       document.getElementById('tsvInput').value = savedTSV;
@@ -696,6 +697,7 @@
     }
 
     if (toggle.checked) {
+      // Untoggle manual banners
       document.getElementById('toggle-event').checked = false;
       document.getElementById('toggle-announcer').checked = false;
 
