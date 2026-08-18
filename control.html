@@ -73,6 +73,8 @@
     button:hover { opacity: 0.9; }
 
     .btn-danger { background: #d62828; }
+    .btn-secondary { background: #3a3a3a; border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #4a4a4a; }
 
     .puller-row, .leaderboard-bar-wrapper {
       position: relative;
@@ -187,6 +189,11 @@
   <div class="card">
     <h3>Panel 2: Live Overlay Controls</h3>
     <div id="pullerList"><i>No participants imported. Paste TSV data above to load roster.</i></div>
+    <div style="margin-top: 15px;">
+      <button onclick="addManualParticipant()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px;">
+        + Add Manual Participant
+      </button>
+    </div>
   </div>
 
   <div class="card">
@@ -268,6 +275,36 @@
       select.value = className;
       updateLeaderboard();
     }
+  }
+
+  function addManualParticipant() {
+    const vehicle = prompt("Enter Vehicle Name:");
+    if (vehicle === null) return;
+
+    const driver = prompt("Enter Driver Name:");
+    if (driver === null) return;
+
+    const hometown = prompt("Enter Hometown (optional):") || "";
+    const pullClass = prompt("Enter Class Name (optional):") || "";
+
+    if (!vehicle.trim() && !driver.trim()) {
+      alert("Participant must have at least a vehicle or driver name.");
+      return;
+    }
+
+    const newPuller = {
+      id: 'p_m_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      vehicle: vehicle.trim(),
+      driver: driver.trim(),
+      hometown: hometown.trim(),
+      pullClass: pullClass.trim(),
+      distance: null
+    };
+
+    pullers.push(newPuller);
+    saveToStorage();
+    renderPullers();
+    updateLeaderboard();
   }
 
   function loadSavedData() {
@@ -376,7 +413,7 @@
     container.innerHTML = '';
 
     if (pullers.length === 0) {
-      container.innerHTML = '<i>No participants imported. Paste TSV data above to load roster.</i>';
+      container.innerHTML = '<i>No participants imported. Paste TSV data above to load roster or use the button below.</i>';
       return;
     }
 
@@ -393,7 +430,7 @@
             <span class="slider"></span>
           </label>
           <div>
-            <strong>${p.driver}</strong> — "${p.vehicle}"<br>
+            <strong>${p.driver || 'N/A'}</strong> — "${p.vehicle || 'N/A'}"<br>
             <small style="color: var(--subtext);">${p.hometown || 'N/A'}</small>
           </div>
         </div>
