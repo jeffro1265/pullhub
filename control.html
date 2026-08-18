@@ -1,3 +1,16 @@
+Here is the updated `control.html` code with an **Event Info & Announcer Section** added directly above Panel 1.
+
+### What Was Added
+
+* **Event Info Controls:** Individual 10-second lower-third triggers for Line 1 (Event Name/Location) and Line 2 (Sub-header/Sponsors).
+* **Announcer Controls:** Individual 10-second lower-third triggers for Line 1 (Announcer Name) and Line 2 (Role/Affiliation).
+* **Native Payload Formatting:** Formatted to send standard `UPDATE_PULLER` and `TOGGLE_VISIBILITY` MQTT messages using your existing lower-third payload structure (mapping Line 1 to `vehicle` and Line 2 to `driver`) so no `overlay.html` changes are required.
+
+---
+
+### Updated `control.html`
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,7 +89,7 @@
     .btn-secondary { background: #3a3a3a; border: 1px solid var(--border); }
     .btn-secondary:hover { background: #4a4a4a; }
 
-    .puller-row, .leaderboard-bar-wrapper {
+    .puller-row, .leaderboard-bar-wrapper, .info-row {
       position: relative;
       background: #262626;
       border: 1px solid var(--border);
@@ -98,7 +111,7 @@
       transition: width 0.1s linear;
     }
 
-    .row-left { display: flex; align-items: center; gap: 15px; z-index: 1; }
+    .row-left { display: flex; align-items: center; gap: 15px; z-index: 1; width: 100%; }
     .row-right { display: flex; align-items: center; gap: 10px; z-index: 1; }
 
     .switch {
@@ -179,6 +192,15 @@
       margin-left: 8px;
       text-transform: uppercase;
     }
+
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    @media (max-width: 768px) {
+      .grid-2col { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -193,6 +215,45 @@
     <div style="display: flex; gap: 10px; align-items: center;">
       <label><small>Channel Key:</small></label>
       <input type="text" id="channelId" value="pulling_event_default_channel" onchange="initMQTT()" style="width: 200px;">
+    </div>
+  </div>
+
+  <!-- Section 0: Event Information & Announcers -->
+  <div class="grid-2col">
+    <!-- Event Info Panel -->
+    <div class="card">
+      <h3>Event Information</h3>
+      <div class="info-row" id="row-evt-info">
+        <div class="timer-bar" id="bar-evt-info"></div>
+        <div class="row-left">
+          <label class="switch">
+            <input type="checkbox" id="toggle-evt-info" onchange="handleInfoToggle('evt-info', 'event')">
+            <span class="slider"></span>
+          </label>
+          <div style="width: 100%;">
+            <input type="text" id="evt-line1" placeholder="Line 1: Event Name / Location" value="Fayette County Fair Pull" onchange="saveInfoData()" style="margin-bottom: 6px;">
+            <input type="text" id="evt-line2" placeholder="Line 2: Subtitle / Date" value="Live Broadcast" onchange="saveInfoData()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Announcer Info Panel -->
+    <div class="card">
+      <h3>Announcer Info</h3>
+      <div class="info-row" id="row-ann-info">
+        <div class="timer-bar" id="bar-ann-info"></div>
+        <div class="row-left">
+          <label class="switch">
+            <input type="checkbox" id="toggle-ann-info" onchange="handleInfoToggle('ann-info', 'announcer')">
+            <span class="slider"></span>
+          </label>
+          <div style="width: 100%;">
+            <input type="text" id="ann-line1" placeholder="Line 1: Announcer Name" value="John Doe" onchange="saveInfoData()" style="margin-bottom: 6px;">
+            <input type="text" id="ann-line2" placeholder="Line 2: Title / Affiliation" value="Track Announcer" onchange="saveInfoData()">
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -292,12 +353,13 @@
   let client = null;
   let topic = '';
   let pullers = [];
-  let overridePullers = null; // Holds manual TSV override array if active
+  let overridePullers = null;
   let timerIntervals = {};
 
   const STORAGE_KEY_PULLERS = 'smog_pullers_data_v1';
   const STORAGE_KEY_TSV = 'smog_tsv_raw_text_v1';
   const STORAGE_KEY_OVERRIDE = 'smog_leaderboard_override_v1';
+  const STORAGE_KEY_INFO = 'smog_event_info_data_v1';
 
   function addCustomClass() {
     const input = prompt("Enter custom class name:");
@@ -343,6 +405,16 @@
     updateLeaderboard();
   }
 
+  function saveInfoData() {
+    const infoData = {
+      evtLine1: document.getElementById('evt-line1').value,
+      evtLine2: document.getElementById('evt-line2').value,
+      annLine1: document.getElementById('ann-line1').value,
+      annLine2: document.getElementById('ann-line2').value
+    };
+    localStorage.setItem(STORAGE_KEY_INFO, JSON.stringify(infoData));
+  }
+
   function loadSavedData() {
     const savedTSV = localStorage.getItem(STORAGE_KEY_TSV);
     if (savedTSV) {
@@ -356,6 +428,19 @@
         renderPullers();
       } catch (e) {
         console.error("Failed to parse saved puller data:", e);
+      }
+    }
+
+    const savedInfo = localStorage.getItem(STORAGE_KEY_INFO);
+    if (savedInfo) {
+      try {
+        const info = JSON.parse(savedInfo);
+        if (info.evtLine1 !== undefined) document.getElementById('evt-line1').value = info.evtLine1;
+        if (info.evtLine2 !== undefined) document.getElementById('evt-line2').value = info.evtLine2;
+        if (info.annLine1 !== undefined) document.getElementById('ann-line1').value = info.annLine1;
+        if (info.annLine2 !== undefined) document.getElementById('ann-line2').value = info.annLine2;
+      } catch(e) {
+        console.error("Failed to parse saved info data:", e);
       }
     }
 
@@ -433,7 +518,6 @@
     updateLeaderboard();
   }
 
-  /* Manual Leaderboard Override TSV Logic */
   function applyOverride() {
     const rawOverride = document.getElementById('tsvOverrideInput').value;
     if (!rawOverride.trim()) {
@@ -485,6 +569,7 @@
       localStorage.removeItem(STORAGE_KEY_PULLERS);
       localStorage.removeItem(STORAGE_KEY_TSV);
       localStorage.removeItem(STORAGE_KEY_OVERRIDE);
+      localStorage.removeItem(STORAGE_KEY_INFO);
       
       document.getElementById('tsvInput').value = '';
       document.getElementById('tsvOverrideInput').value = '';
@@ -552,6 +637,73 @@
     }
   }
 
+  function handleInfoToggle(id, mode) {
+    const toggle = document.getElementById(`toggle-${id}`);
+    const timerBar = document.getElementById(`bar-${id}`);
+
+    const lbToggle = document.getElementById('lbToggle');
+    if (toggle.checked && lbToggle.checked) {
+      lbToggle.checked = false;
+    }
+
+    if (timerIntervals[id]) {
+      clearInterval(timerIntervals[id]);
+      timerBar.style.width = '0%';
+    }
+
+    if (toggle.checked) {
+      saveInfoData();
+      let line1 = '', line2 = '';
+
+      if (mode === 'event') {
+        line1 = document.getElementById('evt-line1').value.trim();
+        line2 = document.getElementById('evt-line2').value.trim();
+      } else if (mode === 'announcer') {
+        line1 = document.getElementById('ann-line1').value.trim();
+        line2 = document.getElementById('ann-line2').value.trim();
+      }
+
+      // Format payload to map directly to existing lower third structure (Vehicle = Line 1, Driver = Line 2)
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({
+          type: 'UPDATE_PULLER',
+          payload: {
+            vehicle: line1,
+            driver: line2,
+            hometown: '',
+            distance: null
+          }
+        }));
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
+      }
+
+      let elapsed = 0;
+      const totalTime = 10000;
+      const intervalTime = 100;
+
+      timerIntervals[id] = setInterval(() => {
+        elapsed += intervalTime;
+        const percentage = (elapsed / totalTime) * 100;
+        timerBar.style.width = `${percentage}%`;
+
+        if (elapsed >= totalTime) {
+          clearInterval(timerIntervals[id]);
+          toggle.checked = false;
+          timerBar.style.width = '0%';
+          
+          if (client && client.connected) {
+            client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+          }
+        }
+      }, intervalTime);
+
+    } else {
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+      }
+    }
+  }
+
   function handleToggle(id) {
     const toggle = document.getElementById(`toggle-${id}`);
     const timerBar = document.getElementById(`bar-${id}`);
@@ -607,12 +759,10 @@
   }
 
   function getLeaderboardData() {
-    // If manual TSV override exists, use it exclusively
     if (overridePullers && overridePullers.length > 0) {
       return overridePullers;
     }
 
-    // Default: Sort Panel 2 pullers by calculated distance
     return pullers
       .filter(p => p.distance !== null && p.distance > 0)
       .sort((a, b) => b.distance - a.distance)
@@ -681,3 +831,5 @@
 
 </body>
 </html>
+
+```
