@@ -23,58 +23,7 @@
       padding: 20px;
     }
     .container { max-width: 900px; margin: 0 auto; }
-
-    /* Auth Modal Overlay */
-    #authOverlay {
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(18, 18, 18, 0.95);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    .auth-card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 30px;
-      width: 100%;
-      max-width: 360px;
-      text-align: center;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    }
-    .auth-card h2 { margin-top: 0; margin-bottom: 10px; }
-    .auth-card p { color: var(--subtext); font-size: 14px; margin-bottom: 20px; }
-    .auth-card input {
-      width: 100%;
-      padding: 12px;
-      background: #2a2a2a;
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 4px;
-      box-sizing: border-box;
-      margin-bottom: 15px;
-      font-size: 16px;
-      text-align: center;
-    }
-    .auth-card button {
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-    }
-    .auth-error {
-      color: #d62828;
-      font-size: 13px;
-      margin-top: 10px;
-      display: none;
-    }
-
-    /* Hide Main App Until Authorized */
-    #appContent {
-      display: none;
-    }
-
+    
     .status-card {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -213,19 +162,7 @@
 </head>
 <body>
 
-<!-- Password Prompt Overlay -->
-<div id="authOverlay">
-  <div class="auth-card">
-    <h2>Control Panel Locked</h2>
-    <p>Enter the password to access live broadcast controls.</p>
-    <input type="password" id="passInput" placeholder="Enter Password" onkeydown="if(event.key==='Enter') verifyPassword()">
-    <button onclick="verifyPassword()">Unlock Panel</button>
-    <div id="authError" class="auth-error">Incorrect password. Access denied.</div>
-  </div>
-</div>
-
-<!-- Main Control Panel Content -->
-<div class="container" id="appContent">
+<div class="container">
   
   <div class="status-card">
     <div class="status-bar">
@@ -318,42 +255,6 @@
 </div>
 
 <script>
-  // Auth Configuration
-  const PANEL_PASSWORD = "pulling"; 
-  const AUTH_KEY = 'smog_panel_auth_token_v2';
-
-  function checkAuth() {
-    const savedToken = localStorage.getItem(AUTH_KEY);
-    
-    // Check if saved auth token matches current password
-    if (savedToken === btoa(PANEL_PASSWORD)) {
-      unlockInterface();
-    }
-  }
-
-  function verifyPassword() {
-    const input = document.getElementById('passInput').value;
-    const errorEl = document.getElementById('authError');
-
-    if (input === PANEL_PASSWORD) {
-      // Store token in localStorage so user doesn't have to enter it again
-      localStorage.setItem(AUTH_KEY, btoa(PANEL_PASSWORD));
-      unlockInterface();
-    } else {
-      errorEl.style.display = 'block';
-      document.getElementById('passInput').value = '';
-    }
-  }
-
-  function unlockInterface() {
-    document.getElementById('authOverlay').style.display = 'none';
-    document.getElementById('appContent').style.display = 'block';
-    
-    // Initialize application logic once unlocked
-    loadSavedData();
-    initMQTT();
-  }
-
   let client = null;
   let topic = '';
   let pullers = [];
@@ -673,8 +574,8 @@
     }
   }
 
-  // Check auth on script load
-  checkAuth();
+  loadSavedData();
+  initMQTT();
 </script>
 
 </body>
