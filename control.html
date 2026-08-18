@@ -74,9 +74,6 @@
     }
     button:hover { opacity: 0.9; }
 
-    .btn-secondary {
-      background: #444444;
-    }
     .btn-danger {
       background: #d62828;
     }
@@ -302,7 +299,7 @@
     const existingDistances = {};
     pullers.forEach(p => {
       const key = `${p.driver.toLowerCase()}_${p.vehicle.toLowerCase()}`;
-      existingDistances[key] = p.distance || 0;
+      existingDistances[key] = p.distance;
     });
 
     const lines = rawText.trim().split('\n');
@@ -314,7 +311,7 @@
       const pullClass = parts[3] ? parts[3].trim() : 'MODIFIED';
 
       const key = `${driver.toLowerCase()}_${vehicle.toLowerCase()}`;
-      const distance = existingDistances[key] !== undefined ? existingDistances[key] : 0;
+      const distance = existingDistances[key] !== undefined ? existingDistances[key] : null;
 
       return {
         id: 'p_' + idx + '_' + Math.random().toString(36).substr(2, 5),
@@ -350,7 +347,7 @@
     }
   }
 
-  // PANEL 2: RENDER LIVE CONTROLS
+  // PANEL 2: RENDER LIVE CONTROLS (REMOVED CLASS DISPLAY FROM ROWS)
   function renderPullers() {
     const container = document.getElementById('pullerList');
     container.innerHTML = '';
@@ -373,11 +370,11 @@
           </label>
           <div>
             <strong>${p.driver}</strong> — ${p.vehicle}<br>
-            <small style="color: var(--subtext);">${p.hometown} | ${p.pullClass}</small>
+            <small style="color: var(--subtext);">${p.hometown || 'N/A'}</small>
           </div>
         </div>
         <div class="row-right">
-          <input type="text" id="dist-${p.id}" value="${p.distance > 0 ? p.distance : ''}" placeholder="Distance (FT)" style="width: 120px;" oninput="updateDistance('${p.id}', this.value)">
+          <input type="text" id="dist-${p.id}" value="${p.distance !== null && p.distance !== undefined ? p.distance : ''}" placeholder="Distance (FT)" style="width: 120px;" oninput="updateDistance('${p.id}', this.value)">
         </div>
       `;
       container.appendChild(row);
@@ -387,8 +384,13 @@
   function updateDistance(id, val) {
     const p = pullers.find(item => item.id === id);
     if (p) {
-      const num = parseFloat(val);
-      p.distance = isNaN(num) ? 0 : num;
+      const trimmed = val.trim();
+      if (trimmed === '') {
+        p.distance = null;
+      } else {
+        const num = parseFloat(trimmed);
+        p.distance = isNaN(num) ? null : num;
+      }
       saveToStorage();
       updateLeaderboard();
     }
@@ -411,12 +413,12 @@
 
     if (toggle.checked) {
       const p = pullers.find(item => item.id === id);
-      const distVal = document.getElementById(`dist-${id}`).value;
+      const distVal = document.getElementById(`dist-${id}`).value.trim();
 
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({
           type: 'UPDATE_PULLER',
-          payload: { ...p, distance: distVal }
+          payload: { ...p, distance: distVal !== '' ? distVal : null }
         }));
         client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
       }
@@ -448,10 +450,10 @@
     }
   }
 
-  // PANEL 3: LEADERBOARD CALCULATION & MANUAL SWITCH
+  // PANEL 3: LEADERBOARD CALCULATION
   function updateLeaderboard() {
     const sorted = [...pullers]
-      .filter(p => p.distance > 0)
+      .filter(p => p.distance !== null && p.distance > 0)
       .sort((a, b) => b.distance - a.distance)
       .slice(0, 5);
 
@@ -470,7 +472,7 @@
         <td><strong>${p.driver}</strong></td>
         <td>${p.vehicle}</td>
         <td>${p.pullClass}</td>
-        <td><strong style="color: var(--accent-green);">${p.distance.toFixed(2)} FT</strong></td>
+        <td><strong style="color: var(--accent-green);">${Number(p.distance).toFixed(2)} FT</strong></td>
       `;
       tbody.appendChild(tr);
     });
@@ -489,7 +491,7 @@
 
     if (toggle.checked) {
       const sorted = [...pullers]
-        .filter(p => p.distance > 0)
+        .filter(p => p.distance !== null && p.distance > 0)
         .sort((a, b) => b.distance - a.distance)
         .slice(0, 5);
 
