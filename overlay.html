@@ -46,6 +46,7 @@
       color: #ffffff;
       min-width: 320px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      text-align: center;
     }
 
     .lt-vehicle {
@@ -87,6 +88,7 @@
       transform: translateX(30px);
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      text-align: center;
     }
     #leaderboard.visible {
       opacity: 1;
@@ -101,6 +103,7 @@
       text-transform: uppercase;
       letter-spacing: 1px;
       border-bottom: 2px solid #2ec4b6;
+      text-align: center;
     }
 
     .lb-row {
@@ -118,10 +121,12 @@
       font-weight: 800;
       color: #2ec4b6;
       width: 40px;
+      text-align: center;
     }
 
     .lb-details {
       flex-grow: 1;
+      text-align: center;
     }
 
     .lb-vehicle {
@@ -139,6 +144,7 @@
       font-size: 16px;
       font-weight: 800;
       color: #ffffff;
+      text-align: center;
     }
   </style>
 </head>
@@ -185,8 +191,8 @@
       if (type === 'UPDATE_PULLER') {
         leaderboard.classList.remove('visible');
 
-        const vName = payload.vehicle ? payload.vehicle.toUpperCase() : '';
-        document.getElementById('vehicleName').innerText = vName ? (vName.startsWith('"') ? vName : `"${vName}"`) : '';
+        const vName = payload.vehicle ? payload.vehicle.toUpperCase().replace(/^["']|["']$/g, '').trim() : '';
+        document.getElementById('vehicleName').innerText = vName;
 
         let driverText = payload.driver ? payload.driver.toUpperCase() : '';
         if (payload.hometown) {
@@ -234,13 +240,14 @@
         payload.forEach((p, idx) => {
           const distNum = parseFloat(p.distance);
           const distDisplay = isNaN(distNum) ? p.distance : distNum.toFixed(2);
+          const cleanVehicle = p.vehicle.toUpperCase().replace(/^["']|["']$/g, '').trim();
           
           const row = document.createElement('div');
           row.className = 'lb-row';
           row.innerHTML = `
             <div class="lb-rank">#${idx + 1}</div>
             <div class="lb-details">
-              <div class="lb-vehicle">"${p.vehicle.toUpperCase()}"</div>
+              <div class="lb-vehicle">${cleanVehicle}</div>
               <div class="lb-driver">${p.driver.toUpperCase()}</div>
             </div>
             <div class="lb-distance">${distDisplay} FT</div>
