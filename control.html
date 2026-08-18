@@ -59,7 +59,7 @@
       box-sizing: border-box;
       font-family: inherit;
     }
-    textarea { height: 120px; resize: vertical; font-family: monospace; }
+    textarea { height: 100px; resize: vertical; font-family: monospace; }
 
     button {
       background: var(--accent);
@@ -145,7 +145,7 @@
     .button-group {
       display: flex;
       gap: 10px;
-      margin-top: 15px;
+      margin-top: 10px;
     }
 
     .class-selector-box {
@@ -157,6 +157,27 @@
       padding: 12px 16px;
       border-radius: 6px;
       border: 1px solid var(--border);
+    }
+
+    .override-box {
+      background: #242424;
+      border: 1px solid var(--border);
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+
+    .override-badge {
+      display: inline-block;
+      background: #e63946;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+      text-transform: uppercase;
     }
   </style>
 </head>
@@ -216,6 +237,20 @@
       </select>
       <button onclick="addCustomClass()" style="white-space: nowrap; flex-shrink: 0;">+ Custom Class</button>
     </div>
+
+    <!-- Manual Leaderboard TSV Bypass Area -->
+    <div class="override-box">
+      <label style="display: block; margin-bottom: 6px;">
+        <strong>Manual Leaderboard TSV Bypass (Overrides Panel 2)</strong>
+        <span id="overrideBadge" class="override-badge" style="display: none;">ACTIVE</span>
+      </label>
+      <p><small style="color: var(--subtext);">Paste tab-separated columns in this exact order: <strong>Distance [TAB] Vehicle [TAB] Driver</strong></small></p>
+      <textarea id="tsvOverrideInput" placeholder="324.50	Iron Maiden	John Doe&#10;318.20	Red Menace	Jane Smith"></textarea>
+      <div class="button-group">
+        <button onclick="applyOverride()" style="flex: 2; background: #2ec4b6; color: #000;">Apply Override to Leaderboard</button>
+        <button onclick="clearOverride()" class="btn-secondary" style="flex: 1;">Clear Override</button>
+      </div>
+    </div>
     
     <div class="leaderboard-bar-wrapper">
       <div class="row-left">
@@ -236,12 +271,11 @@
           <th>Rank</th>
           <th>Driver</th>
           <th>Vehicle</th>
-          <th>Class</th>
           <th>Distance</th>
         </tr>
       </thead>
       <tbody id="leaderboardBody">
-        <tr><td colspan="5" style="text-align: center; color: var(--subtext);">No distance results recorded yet.</td></tr>
+        <tr><td colspan="4" style="text-align: center; color: var(--subtext);">No distance results recorded yet.</td></tr>
       </tbody>
     </table>
   </div>
@@ -258,10 +292,12 @@
   let client = null;
   let topic = '';
   let pullers = [];
+  let overridePullers = null; // Holds manual TSV override array if active
   let timerIntervals = {};
 
   const STORAGE_KEY_PULLERS = 'smog_pullers_data_v1';
   const STORAGE_KEY_TSV = 'smog_tsv_raw_text_v1';
+  const STORAGE_KEY_OVERRIDE = 'smog_leaderboard_override_v1';
 
   function addCustomClass() {
     const input = prompt("Enter custom class name:");
@@ -318,10 +354,17 @@
       try {
         pullers = JSON.parse(savedPullers);
         renderPullers();
-        updateLeaderboard();
       } catch (e) {
         console.error("Failed to parse saved puller data:", e);
       }
+    }
+
+    const savedOverride = localStorage.getItem(STORAGE_KEY_OVERRIDE);
+    if (savedOverride) {
+      document.getElementById('tsvOverrideInput').value = savedOverride;
+      parseOverrideData(savedOverride);
+    } else {
+      updateLeaderboard();
     }
   }
 
@@ -390,13 +433,65 @@
     updateLeaderboard();
   }
 
+  /* Manual Leaderboard Override TSV Logic */
+  function applyOverride() {
+    const rawOverride = document.getElementById('tsvOverrideInput').value;
+    if (!rawOverride.trim()) {
+      clearOverride();
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY_OVERRIDE, rawOverride);
+    parseOverrideData(rawOverride);
+  }
+
+  function parseOverrideData(rawText) {
+    if (!rawText.trim()) {
+      overridePullers = null;
+      document.getElementById('overrideBadge').style.display = 'none';
+      updateLeaderboard();
+      return;
+    }
+
+    const lines = rawText.trim().split('\n');
+    overridePullers = lines.map(line => {
+      const parts = line.split('\t');
+      const distRaw = parts[0] ? parts[0].trim() : '0';
+      const vehicle = parts[1] ? parts[1].trim() : '';
+      const driver = parts[2] ? parts[2].trim() : '';
+
+      const distNum = parseFloat(distRaw);
+
+      return {
+        driver: driver || 'N/A',
+        vehicle: vehicle || 'N/A',
+        distance: isNaN(distNum) ? distRaw : distNum
+      };
+    });
+
+    document.getElementById('overrideBadge').style.display = 'inline-block';
+    updateLeaderboard();
+  }
+
+  function clearOverride() {
+    document.getElementById('tsvOverrideInput').value = '';
+    localStorage.removeItem(STORAGE_KEY_OVERRIDE);
+    overridePullers = null;
+    document.getElementById('overrideBadge').style.display = 'none';
+    updateLeaderboard();
+  }
+
   function clearAllData() {
-    if (confirm("Are you sure you want to clear all imported roster data and distances? This cannot be undone.")) {
+    if (confirm("Are you sure you want to clear all imported roster data, distances, and manual overrides? This cannot be undone.")) {
       localStorage.removeItem(STORAGE_KEY_PULLERS);
       localStorage.removeItem(STORAGE_KEY_TSV);
+      localStorage.removeItem(STORAGE_KEY_OVERRIDE);
       
       document.getElementById('tsvInput').value = '';
+      document.getElementById('tsvOverrideInput').value = '';
+      document.getElementById('overrideBadge').style.display = 'none';
+      
       pullers = [];
+      overridePullers = null;
       
       renderPullers();
       updateLeaderboard();
@@ -512,6 +607,12 @@
   }
 
   function getLeaderboardData() {
+    // If manual TSV override exists, use it exclusively
+    if (overridePullers && overridePullers.length > 0) {
+      return overridePullers;
+    }
+
+    // Default: Sort Panel 2 pullers by calculated distance
     return pullers
       .filter(p => p.distance !== null && p.distance > 0)
       .sort((a, b) => b.distance - a.distance)
@@ -527,18 +628,18 @@
     tbody.innerHTML = '';
 
     if (sorted.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--subtext);">No distance results recorded yet.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--subtext);">No distance results recorded yet.</td></tr>`;
       return;
     }
 
     sorted.forEach((p, idx) => {
       const tr = document.createElement('tr');
+      const distFormatted = typeof p.distance === 'number' ? p.distance.toFixed(2) : p.distance;
       tr.innerHTML = `
         <td class="rank-cell">#${idx + 1}</td>
         <td><strong>${p.driver}</strong></td>
         <td>"${p.vehicle}"</td>
-        <td>${p.pullClass || '—'}</td>
-        <td><strong style="color: var(--accent-green);">${Number(p.distance).toFixed(2)} FT</strong></td>
+        <td><strong style="color: var(--accent-green);">${distFormatted} FT</strong></td>
       `;
       tbody.appendChild(tr);
     });
