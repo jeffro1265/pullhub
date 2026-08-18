@@ -186,13 +186,7 @@
         leaderboard.classList.remove('visible');
 
         const vName = payload.vehicle ? payload.vehicle.toUpperCase() : '';
-        
-        // Remove quotation mark wrapping if flagged as a manual event/announcer banner
-        if (payload.isBanner) {
-          document.getElementById('vehicleName').innerText = vName;
-        } else {
-          document.getElementById('vehicleName').innerText = vName ? (vName.startsWith('"') ? vName : `"${vName}"`) : '';
-        }
+        document.getElementById('vehicleName').innerText = vName ? (vName.startsWith('"') ? vName : `"${vName}"`) : '';
 
         let driverText = payload.driver ? payload.driver.toUpperCase() : '';
         if (payload.hometown) {
