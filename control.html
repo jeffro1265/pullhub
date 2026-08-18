@@ -194,12 +194,12 @@
   </div>
 
   <div class="card">
-    <h3>Panel 3: Leaderboard Standings</h3>
+    <h3>Panel 3: Results Header & Standings</h3>
 
     <div class="class-selector-box">
-      <label for="classSelect"><strong>Filter Leaderboard Class:</strong></label>
+      <label for="classSelect"><strong>Header Class Label:</strong></label>
       <select id="classSelect" onchange="updateLeaderboard()">
-        <option value="ALL">ALL CLASSES</option>
+        <option value="TOP 5">TOP 5</option>
         <option value="LIGHT PRO STOCK">LIGHT PRO STOCK</option>
         <option value="LIMITED PRO STOCK">LIMITED PRO STOCK</option>
         <option value="PRO STOCK">PRO STOCK</option>
@@ -221,7 +221,7 @@
           <span class="slider"></span>
         </label>
         <div>
-          <strong id="lbTitleText">Show Standings Overlay</strong><br>
+          <strong id="lbTitleText">Show Results Overlay</strong><br>
           <small style="color: var(--subtext);">Manual toggle — stays on-screen until switched off</small>
         </div>
       </div>
@@ -323,7 +323,7 @@
       const vehicle = parts[0] ? parts[0].trim() : '';
       const driver = parts[1] ? parts[1].trim() : '';
       const hometown = parts[2] ? parts[2].trim() : '';
-      const pullClass = parts[3] ? parts[3].trim() : 'MODIFIED';
+      const pullClass = parts[3] ? parts[3].trim() : '';
 
       const key = `${driver.toLowerCase()}_${vehicle.toLowerCase()}`;
       const distance = existingDistances[key] !== undefined ? existingDistances[key] : null;
@@ -384,7 +384,7 @@
           </label>
           <div>
             <strong>${p.driver}</strong> — ${p.vehicle}<br>
-            <small style="color: var(--subtext);">${p.hometown || 'N/A'} | Class: ${p.pullClass}</small>
+            <small style="color: var(--subtext);">${p.hometown || 'N/A'}</small>
           </div>
         </div>
         <div class="row-right">
@@ -464,32 +464,23 @@
     }
   }
 
-  function getFilteredLeaderboard() {
-    const selectedClass = document.getElementById('classSelect').value;
-    
+  function getLeaderboardData() {
     return pullers
-      .filter(p => {
-        const hasDist = p.distance !== null && p.distance > 0;
-        if (!hasDist) return false;
-        if (selectedClass === 'ALL') return true;
-        return p.pullClass && p.pullClass.toUpperCase() === selectedClass.toUpperCase();
-      })
+      .filter(p => p.distance !== null && p.distance > 0)
       .sort((a, b) => b.distance - a.distance)
       .slice(0, 5);
   }
 
   function updateLeaderboard() {
-    const selectedClass = document.getElementById('classSelect').value;
-    const classNameText = selectedClass === 'ALL' ? '' : `${selectedClass} `;
-    
-    document.getElementById('lbTitleText').innerText = `Show ${classNameText}Standings Overlay`;
+    const selectedHeader = document.getElementById('classSelect').value;
+    document.getElementById('lbTitleText').innerText = `Show ${selectedHeader} RESULTS Overlay`;
 
-    const sorted = getFilteredLeaderboard();
+    const sorted = getLeaderboardData();
     const tbody = document.getElementById('leaderboardBody');
     tbody.innerHTML = '';
 
     if (sorted.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--subtext);">No distance results recorded for this class.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--subtext);">No distance results recorded yet.</td></tr>`;
       return;
     }
 
@@ -499,7 +490,7 @@
         <td class="rank-cell">#${idx + 1}</td>
         <td><strong>${p.driver}</strong></td>
         <td>${p.vehicle}</td>
-        <td>${p.pullClass}</td>
+        <td>${p.pullClass || '—'}</td>
         <td><strong style="color: var(--accent-green);">${Number(p.distance).toFixed(2)} FT</strong></td>
       `;
       tbody.appendChild(tr);
@@ -509,7 +500,7 @@
     if (lbToggle.checked && client && client.connected) {
       client.publish(topic, JSON.stringify({
         type: 'UPDATE_LEADERBOARD',
-        className: classNameText.trim(),
+        classHeader: selectedHeader,
         payload: sorted
       }));
     }
@@ -519,14 +510,13 @@
     const toggle = document.getElementById('lbToggle');
 
     if (toggle.checked) {
-      const selectedClass = document.getElementById('classSelect').value;
-      const classNameText = selectedClass === 'ALL' ? '' : `${selectedClass} `;
-      const sorted = getFilteredLeaderboard();
+      const selectedHeader = document.getElementById('classSelect').value;
+      const sorted = getLeaderboardData();
 
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({
           type: 'UPDATE_LEADERBOARD',
-          className: classNameText.trim(),
+          classHeader: selectedHeader,
           payload: sorted
         }));
       }
