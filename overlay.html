@@ -75,8 +75,9 @@
       border-radius: 4px;
       color: #2ec4b6;
       border: 1px solid #333333;
-      min-width: 140px;
+      min-width: 120px;
       text-align: center;
+      display: none; /* Controlled dynamically via JS */
     }
 
     /* TOP 5 LEADERBOARD BOARD */
@@ -159,7 +160,7 @@
         <div class="driver-info" id="driverName">DRIVER NAME</div>
         <div class="vehicle-info" id="vehicleName">VEHICLE NAME</div>
       </div>
-      <div class="distance-tag" id="distance">0.00 FT</div>
+      <div class="distance-tag" id="distance"></div>
     </div>
   </div>
 
@@ -176,6 +177,7 @@
 
     const lowerThird = document.getElementById('lower-third');
     const leaderboard = document.getElementById('leaderboard');
+    const distanceEl = document.getElementById('distance');
 
     const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
       clientId: 'obs_overlay_' + Math.random().toString(16).substr(2, 8)
@@ -192,7 +194,7 @@
 
         // 1. Single Puller Lower Third Update
         if (type === 'UPDATE_PULLER') {
-          leaderboard.classList.remove('visible'); // Hide leaderboard when puller graphic is triggered
+          leaderboard.classList.remove('visible');
 
           document.getElementById('driverName').innerText = payload.driver.toUpperCase();
           
@@ -206,7 +208,14 @@
             document.getElementById('pullClass').innerText = payload.pullClass.toUpperCase();
           }
 
-          document.getElementById('distance').innerText = payload.distance ? `${payload.distance} FT` : 'ON TRACK';
+          // Handle Distance Box (Hide completely if empty or null)
+          if (payload.distance !== null && payload.distance !== undefined && String(payload.distance).trim() !== '') {
+            distanceEl.innerText = `${payload.distance} FT`;
+            distanceEl.style.display = 'block';
+          } else {
+            distanceEl.innerText = '';
+            distanceEl.style.display = 'none';
+          }
         }
 
         // 2. Lower Third Visibility Toggle
@@ -221,12 +230,15 @@
 
         // 3. Render Top 5 Leaderboard
         if (type === 'UPDATE_LEADERBOARD') {
-          lowerThird.classList.remove('visible'); // Hide lower third when leaderboard is triggered
+          lowerThird.classList.remove('visible');
           
           const lbRows = document.getElementById('lb-rows');
           lbRows.innerHTML = '';
 
           payload.forEach((p, idx) => {
+            const distNum = parseFloat(p.distance);
+            const distDisplay = isNaN(distNum) ? p.distance : distNum.toFixed(2);
+            
             const row = document.createElement('div');
             row.className = 'lb-row';
             row.innerHTML = `
@@ -235,7 +247,7 @@
                 <div class="lb-driver">${p.driver.toUpperCase()}</div>
                 <div class="lb-vehicle">${p.vehicle.toUpperCase()}</div>
               </div>
-              <div class="lb-distance">${p.distance.toFixed(2)} FT</div>
+              <div class="lb-distance">${distDisplay} FT</div>
             `;
             lbRows.appendChild(row);
           });
