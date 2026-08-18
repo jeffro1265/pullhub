@@ -72,9 +72,7 @@
     }
     button:hover { opacity: 0.9; }
 
-    .btn-danger {
-      background: #d62828;
-    }
+    .btn-danger { background: #d62828; }
 
     .puller-row, .leaderboard-bar-wrapper {
       position: relative;
@@ -91,9 +89,7 @@
 
     .timer-bar {
       position: absolute;
-      top: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; right: 0; bottom: 0;
       width: 0%;
       background: rgba(53, 85, 143, 0.4);
       pointer-events: none;
@@ -197,21 +193,21 @@
     <h3>Panel 3: Results Header & Standings</h3>
 
     <div class="class-selector-box">
-      <label for="classSelect"><strong>Header Class Label:</strong></label>
+      <label for="classSelect" style="white-space: nowrap;"><strong>Header Class Label:</strong></label>
       <select id="classSelect" onchange="updateLeaderboard()">
         <option value="TOP 5">TOP 5</option>
-        <option value="LIGHT PRO STOCK">LIGHT PRO STOCK</option>
-        <option value="LIMITED PRO STOCK">LIMITED PRO STOCK</option>
-        <option value="PRO STOCK">PRO STOCK</option>
-        <option value="SUPER STOCK DIESEL">SUPER STOCK DIESEL</option>
-        <option value="SUPER STOCK OPEN">SUPER STOCK OPEN</option>
-        <option value="MODIFIED UNLIMITED">MODIFIED UNLIMITED</option>
-        <option value="MINI MODIFIED">MINI MODIFIED</option>
-        <option value="TWO WHEEL DRIVE">TWO WHEEL DRIVE</option>
-        <option value="FOUR WHEEL DRIVE">FOUR WHEEL DRIVE</option>
-        <option value="SUPER SEMI">SUPER SEMI</option>
-        <option value="PRO STOCK DIESEL TRUCK">PRO STOCK DIESEL TRUCK</option>
+        <option value="Light-Limited Pro Stock">Light-Limited Pro Stock</option>
+        <option value="Super Stock Tractors">Super Stock Tractors</option>
+        <option value="Light Limited Super Stock">Light Limited Super Stock</option>
+        <option value="Super Modified 4x4 Trucks">Super Modified 4x4 Trucks</option>
+        <option value="Pro Stock">Pro Stock</option>
+        <option value="Limited Pro Diesel Trucks">Limited Pro Diesel Trucks</option>
+        <option value="Two Wheel Drive Trucks">Two Wheel Drive Trucks</option>
+        <option value="Pro Stock Semis">Pro Stock Semis</option>
+        <option value="Super Stock Diesel Trucks">Super Stock Diesel Trucks</option>
+        <option value="Mini-Modified Tractors">Mini-Modified Tractors</option>
       </select>
+      <button onclick="addCustomClass()" style="white-space: nowrap; flex-shrink: 0;">+ Custom Class</button>
     </div>
     
     <div class="leaderboard-bar-wrapper">
@@ -259,6 +255,20 @@
 
   const STORAGE_KEY_PULLERS = 'smog_pullers_data_v1';
   const STORAGE_KEY_TSV = 'smog_tsv_raw_text_v1';
+
+  function addCustomClass() {
+    const input = prompt("Enter custom class name:");
+    if (input && input.trim()) {
+      const className = input.trim();
+      const select = document.getElementById('classSelect');
+      const opt = document.createElement('option');
+      opt.value = className;
+      opt.innerText = className;
+      select.appendChild(opt);
+      select.value = className;
+      updateLeaderboard();
+    }
+  }
 
   function loadSavedData() {
     const savedTSV = localStorage.getItem(STORAGE_KEY_TSV);
