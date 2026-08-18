@@ -391,7 +391,7 @@
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({
           type: 'UPDATE_PULLER',
-          payload: { isBanner: true, vehicle: line1, driver: line2, hometown: '', distance: null }
+          payload: { vehicle: line1, driver: line2, hometown: '', distance: null }
         }));
         client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
       }
@@ -706,7 +706,7 @@
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({
           type: 'UPDATE_PULLER',
-          payload: { ...p, distance: distVal, isBanner: false }
+          payload: { ...p, distance: distVal }
         }));
         client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
       }
