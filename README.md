@@ -1,4 +1,4 @@
-Note: This program is current set up to work with a single organization and logos/colors are designed to match. If you are interested in using this program for your own, is it HIGHLY recommended you reach out to me first so we can update logos and color schemes.  
+Note: This program is currently set up to work with a specific organization and logos/colors are designed to match. If you are interested in using this program for your own, is it HIGHLY recommended you reach out to me first so we can update logos and color schemes.  
   
 Basic instructions:  
 
