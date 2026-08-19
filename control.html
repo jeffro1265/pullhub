@@ -3,147 +3,231 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Motorsports Broadcast Control Center</title>
+  <title>Pulling Broadcast Control Panel</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     :root {
-      --bg-dark: #121212;
-      --panel-bg: #1e1e1e;
-      --border-color: #333;
-      --accent-color: #2196F3;
-      --text-main: #ffffff;
-      --text-muted: #aaa;
+      --bg: #121212;
+      --panel: #1e1e1e;
+      --accent: #35558F;
+      --accent-green: #2ec4b6;
+      --text: #ffffff;
+      --subtext: #aaaaaa;
+      --border: #333333;
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-
     body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
       padding: 20px;
     }
+    .container { max-width: 900px; margin: 0 auto; }
+    
+    .status-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .status-bar { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+    .indicator { width: 12px; height: 12px; border-radius: 50%; background: #777; }
+    .indicator.connected { background: var(--accent-green); }
+    .indicator.disconnected { background: #d62828; }
 
-    .container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
+    .channel-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
-    .panel {
-      background: var(--panel-bg);
-      border: 1px solid var(--border-color);
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
       border-radius: 8px;
       padding: 20px;
+      margin-bottom: 20px;
     }
 
-    h3 {
-      margin-bottom: 15px;
-      font-size: 1.1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 8px;
-      color: var(--accent-color);
-    }
+    h3 { margin-top: 0; }
 
-    textarea {
+    input[type="text"], select, textarea {
       width: 100%;
-      height: 120px;
-      background: #121212;
-      border: 1px solid var(--border-color);
-      color: #fff;
+      background: #2a2a2a;
+      border: 1px solid var(--border);
+      color: var(--text);
       padding: 10px;
       border-radius: 4px;
-      resize: vertical;
-      font-family: monospace;
-      margin-bottom: 10px;
+      box-sizing: border-box;
+      font-family: inherit;
     }
-
-    .override-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-bottom: 15px;
-    }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .field-group label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 4px;
-      color: var(--text-muted);
-    }
-
-    .field-group input {
-      padding: 10px;
-      border-radius: 4px;
-      border: 1px solid var(--border-color);
-      background-color: #121212;
-      color: #fff;
-      font-size: 0.95rem;
-    }
-
-    .field-group input:focus {
-      outline: none;
-      border-color: var(--accent-color);
-    }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-    }
+    textarea { height: 100px; resize: vertical; font-family: monospace; }
 
     button {
-      background: var(--accent-color);
+      background: var(--accent);
       color: white;
       border: none;
-      padding: 10px 18px;
+      padding: 10px 16px;
+      font-weight: bold;
       border-radius: 4px;
-      font-weight: 600;
       cursor: pointer;
-      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+
+    .btn-danger { background: #d62828; }
+    .btn-secondary { background: #3a3a3a; border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #4a4a4a; }
+
+    .puller-row, .leaderboard-bar-wrapper, .info-row {
+      position: relative;
+      background: #262626;
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      overflow: hidden;
     }
 
-    button:hover {
-      opacity: 0.9;
+    .timer-bar {
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: 0%;
+      background: rgba(53, 85, 143, 0.4);
+      pointer-events: none;
+      transition: width 0.1s linear;
     }
 
-    button.btn-clear {
-      background: #444;
-    }
+    .row-left { display: flex; align-items: center; gap: 15px; z-index: 1; width: 100%; }
+    .row-right { display: flex; align-items: center; gap: 10px; z-index: 1; }
 
-    table {
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #444;
+      transition: .3s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 4px; bottom: 4px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--accent-green); }
+    input:checked + .slider:before { transform: translateX(24px); }
+
+    .leaderboard-table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .leaderboard-table th, .leaderboard-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .leaderboard-table th { background: #2a2a2a; color: var(--subtext); }
+    .rank-cell { font-weight: bold; color: var(--accent-green); font-size: 18px; width: 50px; }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
       margin-top: 10px;
     }
 
-    th, td {
-      padding: 10px;
-      text-align: left;
-      border-bottom: 1px solid var(--border-color);
-      font-size: 0.9rem;
+    .class-selector-box {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      background: #262626;
+      padding: 12px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
     }
 
-    th {
-      color: var(--text-muted);
-      font-weight: 600;
+    .override-box {
+      background: #242424;
+      border: 1px solid var(--border);
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+
+    .override-badge {
+      display: inline-block;
+      background: #e63946;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
       text-transform: uppercase;
-      font-size: 0.75rem;
     }
 
-    .full-width {
-      grid-column: span 2;
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    @media (max-width: 768px) {
+      .grid-2col { grid-template-columns: 1fr; }
+    }
+
+    /* Modal Overlay Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      text-align: center;
+    }
+    .modal-box h4 { margin-top: 0; font-size: 18px; margin-bottom: 10px; }
+    .modal-class-display {
+      background: #2a2a2a;
+      border: 1px solid var(--accent);
+      color: #fff;
+      padding: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 6px;
+      margin: 15px 0;
     }
   </style>
 </head>
@@ -151,139 +235,734 @@
 
 <div class="container">
   
-  <!-- TSV Roster Import -->
-  <div class="panel">
-    <h3>Import TSV Roster</h3>
-    <textarea id="tsv-input" placeholder="Paste TSV lines here...&#10;Format per line: Driver [TAB] Vehicle [TAB] Hometown [TAB] Distance"></textarea>
-    <div class="actions">
-      <button id="btn-import">Import Roster</button>
+  <div class="status-card">
+    <div class="status-bar">
+      <div id="statusDot" class="indicator disconnected"></div>
+      <span id="statusText">Connecting...</span>
+    </div>
+    <div class="channel-controls">
+      <label><small>Channel Key:</small></label>
+      <input type="text" id="channelId" value="pulling_event_default_channel" style="width: 180px;">
+      <button onclick="submitChannelKey()">Set Key</button>
+      <button onclick="copyOverlayURL()" class="btn-secondary" id="copyBtn">📋 Copy Overlay URL</button>
     </div>
   </div>
 
-  <!-- Manual Override Panel -->
-  <div class="panel">
-    <h3>Manual Override</h3>
-    <div class="override-grid">
-      <div class="field-group">
-        <label for="override-driver">Driver</label>
-        <input type="text" id="override-driver" placeholder="Driver Name">
+  <!-- Event Information & Announcers -->
+  <div class="grid-2col">
+    <!-- Event Info Panel -->
+    <div class="card">
+      <h3>Event Information</h3>
+      <div class="info-row" id="row-evt-info">
+        <div class="timer-bar" id="bar-evt-info"></div>
+        <div class="row-left">
+          <label class="switch">
+            <input type="checkbox" id="toggle-evt-info" onchange="handleInfoToggle('evt-info', 'event')">
+            <span class="slider"></span>
+          </label>
+          <div style="width: 100%;">
+            <input type="text" id="evt-line1" placeholder="Line 1: Event Name / Location" value="Fayette County Fair Pull" onchange="saveInfoData()" style="margin-bottom: 6px;">
+            <input type="text" id="evt-line2" placeholder="Line 2: Subtitle / Date" value="Live Broadcast" onchange="saveInfoData()">
+          </div>
+        </div>
       </div>
-      
-      <div class="field-group">
-        <label for="override-vehicle">Vehicle</label>
-        <input type="text" id="override-vehicle" placeholder="Vehicle / Truck Name">
-      </div>
+    </div>
 
-      <div class="field-group">
-        <label for="override-hometown">Hometown</label>
-        <input type="text" id="override-hometown" placeholder="City, ST">
+    <!-- Announcer Info Panel -->
+    <div class="card">
+      <h3>Announcer Info</h3>
+      <div class="info-row" id="row-ann-info">
+        <div class="timer-bar" id="bar-ann-info"></div>
+        <div class="row-left">
+          <label class="switch">
+            <input type="checkbox" id="toggle-ann-info" onchange="handleInfoToggle('ann-info', 'announcer')">
+            <span class="slider"></span>
+          </label>
+          <div style="width: 100%;">
+            <input type="text" id="ann-line1" placeholder="Line 1: Announcer Name" value="John Doe" onchange="saveInfoData()" style="margin-bottom: 6px;">
+            <input type="text" id="ann-line2" placeholder="Line 2: Title / Affiliation" value="Track Announcer" onchange="saveInfoData()">
+          </div>
+        </div>
       </div>
+    </div>
+  </div>
 
-      <div class="field-group">
-        <label for="override-distance">Distance</label>
-        <input type="text" id="override-distance" placeholder="000.000">
+  <div class="card">
+    <h3>Import TSV Roster</h3>
+    <p><small style="color: var(--subtext);">Paste tab-separated columns from Excel/Google Sheets in this order:<br>
+    <strong>Vehicle [TAB] Driver [TAB] Hometown [TAB] Class</strong></small></p>
+    <textarea id="tsvInput" placeholder="Iron Maiden	John Doe	Des Moines, IA	Super Stock"></textarea>
+    <div class="button-group">
+      <button onclick="parseTSV()" style="flex: 2;">Parse & Save Roster</button>
+      <button onclick="clearAllData()" class="btn-danger" style="flex: 1;">Clear All Data</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Live Overlay Controls</h3>
+    <div id="pullerList"><i>No participants imported. Paste TSV data above to load roster.</i></div>
+    <div style="margin-top: 15px;">
+      <button onclick="addManualParticipant()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px;">
+        + Add Manual Participant
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Results Header & Standings</h3>
+
+    <div class="class-selector-box">
+      <label for="classSelect" style="white-space: nowrap;"><strong>Header Class Label:</strong></label>
+      <select id="classSelect" onchange="updateLeaderboard()">
+        <option value="TOP 5">TOP 5</option>
+        <option value="Light-Limited Pro Stock">Light-Limited Pro Stock</option>
+        <option value="Super Stock Tractors">Super Stock Tractors</option>
+        <option value="Light Limited Super Stock">Light Limited Super Stock</option>
+        <option value="Super Modified 4x4 Trucks">Super Modified 4x4 Trucks</option>
+        <option value="Pro Stock">Pro Stock</option>
+        <option value="Limited Pro Diesel Trucks">Limited Pro Diesel Trucks</option>
+        <option value="Two Wheel Drive Trucks">Two Wheel Drive Trucks</option>
+        <option value="Pro Stock Semis">Pro Stock Semis</option>
+        <option value="Super Stock Diesel Trucks">Super Stock Diesel Trucks</option>
+        <option value="Mini-Modified Tractors">Mini-Modified Tractors</option>
+      </select>
+      <button onclick="addCustomClass()" style="white-space: nowrap; flex-shrink: 0;">+ Custom Class</button>
+    </div>
+
+    <!-- Manual Leaderboard TSV Bypass Area -->
+    <div class="override-box">
+      <label style="display: block; margin-bottom: 6px;">
+        <strong>Manual Leaderboard TSV Bypass (Overrides Live Controls)</strong>
+        <span id="overrideBadge" class="override-badge" style="display: none;">ACTIVE</span>
+      </label>
+      <p><small style="color: var(--subtext);">Paste tab-separated columns in this exact order: <strong>Distance [TAB] Vehicle [TAB] Driver</strong></small></p>
+      <textarea id="tsvOverrideInput" placeholder="324.50	Iron Maiden	John Doe&#10;318.20	Red Menace	Jane Smith"></textarea>
+      <div class="button-group">
+        <button onclick="applyOverride()" style="flex: 2; background: #2ec4b6; color: #000;">Apply Override to Leaderboard</button>
+        <button onclick="clearOverride()" class="btn-secondary" style="flex: 1;">Clear Override</button>
       </div>
     </div>
     
-    <div class="actions">
-      <button id="btn-apply-override">Apply Override</button>
-      <button id="btn-clear-override" class="btn-clear">Clear</button>
+    <div class="leaderboard-bar-wrapper" id="row-leaderboard">
+      <div class="timer-bar" id="bar-leaderboard"></div>
+      <div class="row-left">
+        <label class="switch">
+          <input type="checkbox" id="lbToggle" onchange="handleLeaderboardToggleClick(event)">
+          <span class="slider"></span>
+        </label>
+        <div>
+          <strong id="lbTitleText">Show Results Overlay</strong><br>
+          <small style="color: var(--subtext);">Triggers 10-second broadcast overlay timer</small>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <!-- Results Panel Table -->
-  <div class="panel full-width">
-    <h3>Current Results</h3>
-    <table id="results-table">
+    <table class="leaderboard-table">
       <thead>
         <tr>
           <th>Rank</th>
           <th>Driver</th>
           <th>Vehicle</th>
-          <th>Hometown</th>
           <th>Distance</th>
-          <th>Action</th>
         </tr>
       </thead>
-      <tbody id="results-body">
-        <!-- Rendered dynamically -->
+      <tbody id="leaderboardBody">
+        <tr><td colspan="4" style="text-align: center; color: var(--subtext);">No distance results recorded yet.</td></tr>
       </tbody>
     </table>
   </div>
 
+  <div style="margin-top: 30px; text-align: center; margin-bottom: 40px;">
+    <button onclick="clearAllData()" class="btn-danger" style="padding: 14px 28px; font-size: 16px; border-radius: 6px;">
+      ⚠️ Reset Event Data & Clear Saved Storage
+    </button>
+  </div>
+
+</div>
+
+<!-- Header Class Confirmation Modal -->
+<div id="confirmModal" class="modal-overlay" style="display: none;">
+  <div class="modal-box">
+    <h4>Confirm Results Header Label</h4>
+    <p style="color: var(--subtext); margin-bottom: 5px;"><small>Is the current class label correct for the overlay?</small></p>
+    <div id="modalClassName" class="modal-class-display">---</div>
+    <div class="button-group">
+      <button onclick="confirmLeaderboardToggle()" style="flex: 1; background: #2ec4b6; color: #000;">Yes, Show Overlay</button>
+      <button onclick="cancelLeaderboardToggle()" class="btn-secondary" style="flex: 1;">No, Go Back</button>
+    </div>
+  </div>
 </div>
 
 <script>
-  // Initialize BroadcastChannel for cross-window sync
-  const channel = new BroadcastChannel('motorsports_overlay_channel');
-  let rosterData = [];
+  let client = null;
+  let topic = '';
+  let pullers = [];
+  let overridePullers = null;
+  let timerIntervals = {};
 
-  // Parse TSV Roster Input
-  // Format expected: Driver \t Vehicle \t Hometown \t Distance
-  document.getElementById('btn-import').addEventListener('click', () => {
-    const rawText = document.getElementById('tsv-input').value;
-    if (!rawText.trim()) return;
+  const STORAGE_KEY_PULLERS = 'smog_pullers_data_v1';
+  const STORAGE_KEY_TSV = 'smog_tsv_raw_text_v1';
+  const STORAGE_KEY_OVERRIDE = 'smog_leaderboard_override_v1';
+  const STORAGE_KEY_INFO = 'smog_event_info_data_v1';
+  const STORAGE_KEY_CHANNEL = 'smog_channel_key_v1';
 
-    const lines = rawText.trim().split('\n');
-    rosterData = lines.map((line) => {
-      const [driver, vehicle, hometown, distance] = line.split('\t').map(col => col?.trim() || '');
-      return {
-        driver: driver || 'N/A',
-        vehicle: vehicle || 'N/A',
-        hometown: hometown || 'N/A',
-        distance: distance || '000.000'
-      };
-    });
+  function addCustomClass() {
+    const input = prompt("Enter custom class name:");
+    if (input && input.trim()) {
+      const className = input.trim();
+      const select = document.getElementById('classSelect');
+      const opt = document.createElement('option');
+      opt.value = className;
+      opt.innerText = className;
+      select.appendChild(opt);
+      select.value = className;
+      updateLeaderboard();
+    }
+  }
 
-    renderResultsTable();
-  });
+  function addManualParticipant() {
+    const vehicle = prompt("Enter Vehicle Name:");
+    if (vehicle === null) return;
 
-  // Render Roster in Control Panel Table
-  function renderResultsTable() {
-    const tbody = document.getElementById('results-body');
-    tbody.innerHTML = '';
+    const driver = prompt("Enter Driver Name:");
+    if (driver === null) return;
 
-    rosterData.forEach((item, index) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${index + 1}</td>
-        <td><strong>${item.driver}</strong></td>
-        <td>${item.vehicle}</td>
-        <td>${item.hometown}</td>
-        <td>${item.distance}</td>
-        <td><button onclick="sendToOverlay(${index})" style="padding: 4px 8px; font-size: 0.8rem;">Push to Stream</button></td>
-      `;
-      tbody.appendChild(row);
+    const hometown = prompt("Enter Hometown (optional):") || "";
+    const pullClass = prompt("Enter Class Name (optional):") || "";
+
+    if (!vehicle.trim() && !driver.trim()) {
+      alert("Participant must have at least a vehicle or driver name.");
+      return;
+    }
+
+    const newPuller = {
+      id: 'p_m_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      vehicle: vehicle.trim(),
+      driver: driver.trim(),
+      hometown: hometown.trim(),
+      pullClass: pullClass.trim(),
+      distance: null
+    };
+
+    pullers.push(newPuller);
+    saveToStorage();
+    renderPullers();
+    updateLeaderboard();
+  }
+
+  function saveInfoData() {
+    const infoData = {
+      evtLine1: document.getElementById('evt-line1').value,
+      evtLine2: document.getElementById('evt-line2').value,
+      annLine1: document.getElementById('ann-line1').value,
+      annLine2: document.getElementById('ann-line2').value
+    };
+    localStorage.setItem(STORAGE_KEY_INFO, JSON.stringify(infoData));
+  }
+
+  function loadSavedData() {
+    const savedChannel = localStorage.getItem(STORAGE_KEY_CHANNEL);
+    if (savedChannel) {
+      document.getElementById('channelId').value = savedChannel;
+    }
+
+    const savedTSV = localStorage.getItem(STORAGE_KEY_TSV);
+    if (savedTSV) {
+      document.getElementById('tsvInput').value = savedTSV;
+    }
+
+    const savedPullers = localStorage.getItem(STORAGE_KEY_PULLERS);
+    if (savedPullers) {
+      try {
+        pullers = JSON.parse(savedPullers);
+        renderPullers();
+      } catch (e) {
+        console.error("Failed to parse saved puller data:", e);
+      }
+    }
+
+    const savedInfo = localStorage.getItem(STORAGE_KEY_INFO);
+    if (savedInfo) {
+      try {
+        const info = JSON.parse(savedInfo);
+        if (info.evtLine1 !== undefined) document.getElementById('evt-line1').value = info.evtLine1;
+        if (info.evtLine2 !== undefined) document.getElementById('evt-line2').value = info.evtLine2;
+        if (info.annLine1 !== undefined) document.getElementById('ann-line1').value = info.annLine1;
+        if (info.annLine2 !== undefined) document.getElementById('ann-line2').value = info.annLine2;
+      } catch(e) {
+        console.error("Failed to parse saved info data:", e);
+      }
+    }
+
+    const savedOverride = localStorage.getItem(STORAGE_KEY_OVERRIDE);
+    if (savedOverride) {
+      document.getElementById('tsvOverrideInput').value = savedOverride;
+      parseOverrideData(savedOverride);
+    } else {
+      updateLeaderboard();
+    }
+  }
+
+  function saveToStorage() {
+    localStorage.setItem(STORAGE_KEY_PULLERS, JSON.stringify(pullers));
+    localStorage.setItem(STORAGE_KEY_TSV, document.getElementById('tsvInput').value);
+  }
+
+  function submitChannelKey() {
+    const key = document.getElementById('channelId').value.trim();
+    if (!key) {
+      alert("Please enter a valid Channel Key.");
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY_CHANNEL, key);
+    initMQTT();
+  }
+
+  function copyOverlayURL() {
+    const key = document.getElementById('channelId').value.trim();
+    const fullURL = `https://jeffro1265.github.io/pullhub/overlay.html?channel=${encodeURIComponent(key)}`;
+    
+    navigator.clipboard.writeText(fullURL).then(() => {
+      const copyBtn = document.getElementById('copyBtn');
+      const originalText = copyBtn.innerText;
+      copyBtn.innerText = '✅ Copied!';
+      setTimeout(() => {
+        copyBtn.innerText = originalText;
+      }, 2000);
+    }).catch(err => {
+      console.error('Could not copy text: ', err);
+      alert(`Overlay URL: ${fullURL}`);
     });
   }
 
-  // Push specific row from table to overlay
-  window.sendToOverlay = function(index) {
-    const entry = rosterData[index];
-    if (entry) {
-      channel.postMessage({ type: 'UPDATE_OVERLAY', data: entry });
+  function initMQTT() {
+    const channelName = document.getElementById('channelId').value.trim();
+    topic = `smog_media_pulling/${channelName}/control`;
+    
+    if (client) client.end();
+
+    document.getElementById('statusText').innerText = "Connecting...";
+    document.getElementById('statusDot').className = "indicator disconnected";
+
+    client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+      clientId: 'ctrl_' + Math.random().toString(16).substr(2, 8)
+    });
+
+    client.on('connect', () => {
+      document.getElementById('statusText').innerText = `Connected (${channelName})`;
+      document.getElementById('statusDot').className = "indicator connected";
+    });
+
+    client.on('error', () => {
+      document.getElementById('statusText').innerText = "Connection Error";
+      document.getElementById('statusDot').className = "indicator disconnected";
+    });
+  }
+
+  function parseTSV() {
+    const rawText = document.getElementById('tsvInput').value;
+    if (!rawText.trim()) return;
+
+    const existingDistances = {};
+    pullers.forEach(p => {
+      const key = `${p.driver.toLowerCase()}_${p.vehicle.toLowerCase()}`;
+      existingDistances[key] = p.distance;
+    });
+
+    const lines = rawText.trim().split('\n');
+    pullers = lines.map((line, idx) => {
+      const parts = line.split('\t');
+      const vehicle = parts[0] ? parts[0].trim() : '';
+      const driver = parts[1] ? parts[1].trim() : '';
+      const hometown = parts[2] ? parts[2].trim() : '';
+      const pullClass = parts[3] ? parts[3].trim() : '';
+
+      const key = `${driver.toLowerCase()}_${vehicle.toLowerCase()}`;
+      const distance = existingDistances[key] !== undefined ? existingDistances[key] : null;
+
+      return {
+        id: 'p_' + idx + '_' + Math.random().toString(36).substr(2, 5),
+        vehicle,
+        driver,
+        hometown,
+        pullClass,
+        distance
+      };
+    });
+
+    saveToStorage();
+    renderPullers();
+    updateLeaderboard();
+  }
+
+  function applyOverride() {
+    const rawOverride = document.getElementById('tsvOverrideInput').value;
+    if (!rawOverride.trim()) {
+      clearOverride();
+      return;
     }
-  };
+    localStorage.setItem(STORAGE_KEY_OVERRIDE, rawOverride);
+    parseOverrideData(rawOverride);
+  }
 
-  // Apply Manual Override
-  document.getElementById('btn-apply-override').addEventListener('click', () => {
-    const overrideEntry = {
-      driver: document.getElementById('override-driver').value.trim() || 'N/A',
-      vehicle: document.getElementById('override-vehicle').value.trim() || 'N/A',
-      hometown: document.getElementById('override-hometown').value.trim() || 'N/A',
-      distance: document.getElementById('override-distance').value.trim() || '000.000'
-    };
+  function parseOverrideData(rawText) {
+    if (!rawText.trim()) {
+      overridePullers = null;
+      document.getElementById('overrideBadge').style.display = 'none';
+      updateLeaderboard();
+      return;
+    }
 
-    channel.postMessage({ type: 'UPDATE_OVERLAY', data: overrideEntry });
-  });
+    const lines = rawText.trim().split('\n');
+    overridePullers = lines.map(line => {
+      const parts = line.split('\t');
+      const distRaw = parts[0] ? parts[0].trim() : '0';
+      const vehicle = parts[1] ? parts[1].trim() : '';
+      const driver = parts[2] ? parts[2].trim() : '';
 
-  // Clear Override Inputs
-  document.getElementById('btn-clear-override').addEventListener('click', () => {
-    document.getElementById('override-driver').value = '';
-    document.getElementById('override-vehicle').value = '';
-    document.getElementById('override-hometown').value = '';
-    document.getElementById('override-distance').value = '';
-  });
+      const distNum = parseFloat(distRaw);
+
+      return {
+        driver: driver || 'N/A',
+        vehicle: vehicle || 'N/A',
+        distance: isNaN(distNum) ? distRaw : distNum
+      };
+    });
+
+    document.getElementById('overrideBadge').style.display = 'inline-block';
+    updateLeaderboard();
+  }
+
+  function clearOverride() {
+    document.getElementById('tsvOverrideInput').value = '';
+    localStorage.removeItem(STORAGE_KEY_OVERRIDE);
+    overridePullers = null;
+    document.getElementById('overrideBadge').style.display = 'none';
+    updateLeaderboard();
+  }
+
+  function clearAllData() {
+    if (confirm("Are you sure you want to clear all imported roster data, distances, and manual overrides? This cannot be undone.")) {
+      localStorage.removeItem(STORAGE_KEY_PULLERS);
+      localStorage.removeItem(STORAGE_KEY_TSV);
+      localStorage.removeItem(STORAGE_KEY_OVERRIDE);
+      localStorage.removeItem(STORAGE_KEY_INFO);
+      
+      document.getElementById('tsvInput').value = '';
+      document.getElementById('tsvOverrideInput').value = '';
+      document.getElementById('overrideBadge').style.display = 'none';
+      
+      pullers = [];
+      overridePullers = null;
+      
+      renderPullers();
+      updateLeaderboard();
+
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+        client.publish(topic, JSON.stringify({ type: 'HIDE_LEADERBOARD' }));
+      }
+    }
+  }
+
+  function renderPullers() {
+    const container = document.getElementById('pullerList');
+    container.innerHTML = '';
+
+    if (pullers.length === 0) {
+      container.innerHTML = '<i>No participants imported. Paste TSV data above to load roster or use the button below.</i>';
+      return;
+    }
+
+    pullers.forEach((p) => {
+      const distValue = (p.distance !== null && p.distance !== undefined && p.distance !== 0) ? p.distance : '';
+      const row = document.createElement('div');
+      row.className = 'puller-row';
+      row.id = `row-${p.id}`;
+      row.innerHTML = `
+        <div class="timer-bar" id="bar-${p.id}"></div>
+        <div class="row-left">
+          <label class="switch">
+            <input type="checkbox" id="toggle-${p.id}" onchange="handleToggle('${p.id}')">
+            <span class="slider"></span>
+          </label>
+          <div>
+            <strong>${p.driver || 'N/A'}</strong> — "${p.vehicle || 'N/A'}"<br>
+            <small style="color: var(--subtext);">${p.hometown || 'N/A'}</small>
+          </div>
+        </div>
+        <div class="row-right">
+          <input type="text" inputmode="decimal" pattern="[0-9.]*" id="dist-${p.id}" value="${distValue}" placeholder="Distance (FT)" style="width: 120px;" oninput="updateDistance('${p.id}', this.value)">
+        </div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function updateDistance(id, val) {
+    const p = pullers.find(item => item.id === id);
+    if (p) {
+      const trimmed = val.trim();
+      if (trimmed === '' || trimmed === '0') {
+        p.distance = null;
+      } else {
+        const num = parseFloat(trimmed);
+        p.distance = isNaN(num) || num === 0 ? null : num;
+      }
+      saveToStorage();
+      updateLeaderboard();
+    }
+  }
+
+  function handleInfoToggle(id, mode) {
+    const toggle = document.getElementById(`toggle-${id}`);
+    const timerBar = document.getElementById(`bar-${id}`);
+
+    const lbToggle = document.getElementById('lbToggle');
+    if (toggle.checked && lbToggle.checked) {
+      lbToggle.checked = false;
+      handleLeaderboardToggleState(false);
+    }
+
+    if (timerIntervals[id]) {
+      clearInterval(timerIntervals[id]);
+      timerBar.style.width = '0%';
+    }
+
+    if (toggle.checked) {
+      saveInfoData();
+      let line1 = '', line2 = '';
+
+      if (mode === 'event') {
+        line1 = document.getElementById('evt-line1').value.trim();
+        line2 = document.getElementById('evt-line2').value.trim();
+      } else if (mode === 'announcer') {
+        line1 = document.getElementById('ann-line1').value.trim();
+        line2 = document.getElementById('ann-line2').value.trim();
+      }
+
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({
+          type: 'UPDATE_PULLER',
+          payload: {
+            vehicle: line1,
+            driver: line2,
+            hometown: '',
+            distance: null
+          }
+        }));
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
+      }
+
+      let elapsed = 0;
+      const totalTime = 10000;
+      const intervalTime = 100;
+
+      timerIntervals[id] = setInterval(() => {
+        elapsed += intervalTime;
+        const percentage = (elapsed / totalTime) * 100;
+        timerBar.style.width = `${percentage}%`;
+
+        if (elapsed >= totalTime) {
+          clearInterval(timerIntervals[id]);
+          toggle.checked = false;
+          timerBar.style.width = '0%';
+          
+          if (client && client.connected) {
+            client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+          }
+        }
+      }, intervalTime);
+
+    } else {
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+      }
+    }
+  }
+
+  function handleToggle(id) {
+    const toggle = document.getElementById(`toggle-${id}`);
+    const timerBar = document.getElementById(`bar-${id}`);
+
+    const lbToggle = document.getElementById('lbToggle');
+    if (toggle.checked && lbToggle.checked) {
+      lbToggle.checked = false;
+      handleLeaderboardToggleState(false);
+    }
+
+    if (timerIntervals[id]) {
+      clearInterval(timerIntervals[id]);
+      timerBar.style.width = '0%';
+    }
+
+    if (toggle.checked) {
+      const p = pullers.find(item => item.id === id);
+      const rawDist = document.getElementById(`dist-${id}`).value.trim();
+      const distVal = (rawDist === '' || rawDist === '0') ? null : rawDist;
+
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({
+          type: 'UPDATE_PULLER',
+          payload: { ...p, distance: distVal }
+        }));
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: true }));
+      }
+
+      let elapsed = 0;
+      const totalTime = 10000;
+      const intervalTime = 100;
+
+      timerIntervals[id] = setInterval(() => {
+        elapsed += intervalTime;
+        const percentage = (elapsed / totalTime) * 100;
+        timerBar.style.width = `${percentage}%`;
+
+        if (elapsed >= totalTime) {
+          clearInterval(timerIntervals[id]);
+          toggle.checked = false;
+          timerBar.style.width = '0%';
+          
+          if (client && client.connected) {
+            client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+          }
+        }
+      }, intervalTime);
+
+    } else {
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({ type: 'TOGGLE_VISIBILITY', visible: false }));
+      }
+    }
+  }
+
+  function getLeaderboardData() {
+    if (overridePullers && overridePullers.length > 0) {
+      return overridePullers;
+    }
+
+    return pullers
+      .filter(p => p.distance !== null && p.distance > 0)
+      .sort((a, b) => b.distance - a.distance)
+      .slice(0, 5);
+  }
+
+  function updateLeaderboard() {
+    const selectedHeader = document.getElementById('classSelect').value;
+    document.getElementById('lbTitleText').innerText = `Show ${selectedHeader} RESULTS Overlay`;
+
+    const sorted = getLeaderboardData();
+    const tbody = document.getElementById('leaderboardBody');
+    tbody.innerHTML = '';
+
+    if (sorted.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--subtext);">No distance results recorded yet.</td></tr>`;
+      return;
+    }
+
+    sorted.forEach((p, idx) => {
+      const tr = document.createElement('tr');
+      const distFormatted = typeof p.distance === 'number' ? p.distance.toFixed(2) : p.distance;
+      tr.innerHTML = `
+        <td class="rank-cell">#${idx + 1}</td>
+        <td><strong>${p.driver}</strong></td>
+        <td>"${p.vehicle}"</td>
+        <td><strong style="color: var(--accent-green);">${distFormatted} FT</strong></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const lbToggle = document.getElementById('lbToggle');
+    if (lbToggle.checked && client && client.connected) {
+      client.publish(topic, JSON.stringify({
+        type: 'UPDATE_LEADERBOARD',
+        classHeader: selectedHeader,
+        payload: sorted
+      }));
+    }
+  }
+
+  /* Handles initial toggle click & prompts confirmation if enabling */
+  function handleLeaderboardToggleClick(event) {
+    const toggle = document.getElementById('lbToggle');
+    
+    if (toggle.checked) {
+      // Temporarily revert switch state until user confirms
+      toggle.checked = false;
+      
+      const selectedHeader = document.getElementById('classSelect').value;
+      document.getElementById('modalClassName').innerText = selectedHeader;
+      document.getElementById('confirmModal').style.display = 'flex';
+    } else {
+      // User turned off switch directly
+      handleLeaderboardToggleState(false);
+    }
+  }
+
+  function confirmLeaderboardToggle() {
+    document.getElementById('confirmModal').style.display = 'none';
+    const toggle = document.getElementById('lbToggle');
+    toggle.checked = true;
+    handleLeaderboardToggleState(true);
+  }
+
+  function cancelLeaderboardToggle() {
+    document.getElementById('confirmModal').style.display = 'none';
+    const toggle = document.getElementById('lbToggle');
+    toggle.checked = false;
+  }
+
+  function handleLeaderboardToggleState(shouldEnable) {
+    const toggle = document.getElementById('lbToggle');
+    const timerBar = document.getElementById('bar-leaderboard');
+    const timerKey = 'leaderboard';
+
+    if (timerIntervals[timerKey]) {
+      clearInterval(timerIntervals[timerKey]);
+      timerBar.style.width = '0%';
+    }
+
+    if (shouldEnable) {
+      const selectedHeader = document.getElementById('classSelect').value;
+      const sorted = getLeaderboardData();
+
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({
+          type: 'UPDATE_LEADERBOARD',
+          classHeader: selectedHeader,
+          payload: sorted
+        }));
+      }
+
+      let elapsed = 0;
+      const totalTime = 10000;
+      const intervalTime = 100;
+
+      timerIntervals[timerKey] = setInterval(() => {
+        elapsed += intervalTime;
+        const percentage = (elapsed / totalTime) * 100;
+        timerBar.style.width = `${percentage}%`;
+
+        if (elapsed >= totalTime) {
+          clearInterval(timerIntervals[timerKey]);
+          toggle.checked = false;
+          timerBar.style.width = '0%';
+          
+          if (client && client.connected) {
+            client.publish(topic, JSON.stringify({ type: 'HIDE_LEADERBOARD' }));
+          }
+        }
+      }, intervalTime);
+
+    } else {
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify({ type: 'HIDE_LEADERBOARD' }));
+      }
+    }
+  }
+
+  loadSavedData();
+  initMQTT();
 </script>
 
 </body>
