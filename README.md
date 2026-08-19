@@ -1,3 +1,5 @@
+This is a stream overlay and controller specifically designed for truck and tractor pulling lower thirds and results. The controller works on mobile devices or desktop PCs and is intended to be integrated into streaming softwares or encoders that support browser based overlays such as OBS, Yolobox, Magewell Director, or others.  
+
 Note: This program is currently set up to work with a specific organization and logos/colors are designed to match. If you are interested in using this program yourself, is it HIGHLY recommended you reach out to me first so we can update logos and color schemes.  
   
 Basic instructions:  
@@ -11,7 +13,7 @@ Basic instructions:
   -If you want to enter participants in manually, you have that option as well. The class dialogue option should be skipped at this time.  
   
 **USING:**  
-1) Press the switch beside each participant to enable the lower third overlay. The overlay will show for 10 seconds, with a countdown bar visible in the control panel. you may kill the overlay at any time by pressing the switch again. If a distance is not entered, then it will show nothing.   
+1) Press the switch beside each participant to enable the lower third overlay. The overlay will show for 10 seconds, with a countdown bar visible in the control panel. you may kill the overlay at any time by pressing the switch again. If entering a distance for each participant is not required, the overlay will just omit the distance box all together.     
   -The intended use case is to enable the overlay as driver is backing up to the sled. It will time out after 10 seconds. Once driver is finished, enter the distance and press the switch again to show the overlay with name/distance etc for 10 seconds.  
 2) When all participants have finished, it will compile them into the results overlay at the bottom. The top 5 distances will be included. Select the class header from the drop down and press the show overlay switch to show the results on the overlay.  
   -There is a window that will pop-up asking to confirm the class header. This is to prevent accidentally showing the wrong class header.   
