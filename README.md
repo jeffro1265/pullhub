@@ -16,4 +16,4 @@ Basic instructions:
   -If you do not wish to use the distance boxes in the participants list, you can paste a block of tab separated cells (TSV) that include distances, team/vehicle, and driver name. Press the override button over-ride any distances values that were manually entered above.   
 
 
-Values entered into the controller are set up to remain saved until the red clear buttons are pressed. The red clear button under the import roster section only clears the roster list. The reset event data button at the bottom clears all and requires you to go back to set up 1 set up. 
+Values entered into the controller are set up to remain saved until the red clear buttons are pressed. The red clear button under the import roster section only clears the roster list. The reset event data button at the bottom of the page clears all and requires you to go back to set up 1 set up. 
