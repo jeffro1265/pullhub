@@ -33,11 +33,20 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
     }
     .status-bar { display: flex; align-items: center; gap: 10px; font-size: 14px; }
     .indicator { width: 12px; height: 12px; border-radius: 50%; background: #777; }
     .indicator.connected { background: var(--accent-green); }
     .indicator.disconnected { background: #d62828; }
+
+    .channel-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
     .card {
       background: var(--panel);
@@ -199,9 +208,11 @@
       <div id="statusDot" class="indicator disconnected"></div>
       <span id="statusText">Connecting...</span>
     </div>
-    <div style="display: flex; gap: 10px; align-items: center;">
+    <div class="channel-controls">
       <label><small>Channel Key:</small></label>
-      <input type="text" id="channelId" value="pulling_event_default_channel" onchange="initMQTT()" style="width: 200px;">
+      <input type="text" id="channelId" value="pulling_event_default_channel" style="width: 180px;">
+      <button onclick="submitChannelKey()">Set Key</button>
+      <button onclick="copyOverlayURL()" class="btn-secondary" id="copyBtn">📋 Copy Overlay URL</button>
     </div>
   </div>
 
@@ -347,6 +358,7 @@
   const STORAGE_KEY_TSV = 'smog_tsv_raw_text_v1';
   const STORAGE_KEY_OVERRIDE = 'smog_leaderboard_override_v1';
   const STORAGE_KEY_INFO = 'smog_event_info_data_v1';
+  const STORAGE_KEY_CHANNEL = 'smog_channel_key_v1';
 
   function addCustomClass() {
     const input = prompt("Enter custom class name:");
@@ -403,6 +415,11 @@
   }
 
   function loadSavedData() {
+    const savedChannel = localStorage.getItem(STORAGE_KEY_CHANNEL);
+    if (savedChannel) {
+      document.getElementById('channelId').value = savedChannel;
+    }
+
     const savedTSV = localStorage.getItem(STORAGE_KEY_TSV);
     if (savedTSV) {
       document.getElementById('tsvInput').value = savedTSV;
@@ -445,6 +462,33 @@
     localStorage.setItem(STORAGE_KEY_TSV, document.getElementById('tsvInput').value);
   }
 
+  function submitChannelKey() {
+    const key = document.getElementById('channelId').value.trim();
+    if (!key) {
+      alert("Please enter a valid Channel Key.");
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY_CHANNEL, key);
+    initMQTT();
+  }
+
+  function copyOverlayURL() {
+    const key = document.getElementById('channelId').value.trim();
+    const fullURL = `https://jeffro1265.github.io/pullhub/overlay.html?channel=${encodeURIComponent(key)}`;
+    
+    navigator.clipboard.writeText(fullURL).then(() => {
+      const copyBtn = document.getElementById('copyBtn');
+      const originalText = copyBtn.innerText;
+      copyBtn.innerText = '✅ Copied!';
+      setTimeout(() => {
+        copyBtn.innerText = originalText;
+      }, 2000);
+    }).catch(err => {
+      console.error('Could not copy text: ', err);
+      alert(`Overlay URL: ${fullURL}`);
+    });
+  }
+
   function initMQTT() {
     const channelName = document.getElementById('channelId').value.trim();
     topic = `smog_media_pulling/${channelName}/control`;
@@ -459,7 +503,7 @@
     });
 
     client.on('connect', () => {
-      document.getElementById('statusText').innerText = "Connected (Live)";
+      document.getElementById('statusText').innerText = `Connected (${channelName})`;
       document.getElementById('statusDot').className = "indicator connected";
     });
 
@@ -650,7 +694,6 @@
         line2 = document.getElementById('ann-line2').value.trim();
       }
 
-      // Format payload to map directly to existing lower third structure (Vehicle = Line 1, Driver = Line 2)
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({
           type: 'UPDATE_PULLER',
