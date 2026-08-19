@@ -14,3 +14,6 @@ Basic instructions:
 2) When all participants have finished, it will compile them into the results overlay at the bottom. The top 5 distances will be included. Select the class header from the drop down and press the show overlay switch to show the results on the overlay.  
   -There is a window that will pop-up asking to confirm the class header. This is to prevent accidentally showing the wrong class header.   
   -If you do not wish to use the distance boxes in the participants list, you can paste a block of tab separated cells (TSV) that include distances, team/vehicle, and driver name. Press the override button over-ride any distances values that were manually entered above.   
+
+
+Values entered into the controller are set up to remain saved until the red clear buttons are pressed. The red clear button under the import roster section only clears the roster list. The reset event data button at the bottom clears all and requires you to go back to set up 1 set up. 
