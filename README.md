@@ -1,7 +1,7 @@
 Basic instructions:
 
 **SETUP:**
-1)Go here to access the controller webpage: https://jeffro1265.github.io/pullhub/control.html
+1)Go here to access the controller webpage: https://jeffro1265.github.io/pullhub/control.html  
 2)Set a unique key and press submit. It doesn't have to be complicated, just something unique so someone doesn't output to your overlay.
 3)Press **Copy Output URL** and paste that as a 1920X1080 browser source in OBS or an encoder like a Yolobox or Magewell director.
 4)Input event details and or announcer info. These are generic enough that you can use them for anything, but the first box for each will be a header with larger text. 
