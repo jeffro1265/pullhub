@@ -311,7 +311,8 @@
       </div>
     </div>
     
-    <div class="leaderboard-bar-wrapper">
+    <div class="leaderboard-bar-wrapper" id="row-leaderboard">
+      <div class="timer-bar" id="bar-leaderboard"></div>
       <div class="row-left">
         <label class="switch">
           <input type="checkbox" id="lbToggle" onchange="handleLeaderboardToggle()">
@@ -319,7 +320,7 @@
         </label>
         <div>
           <strong id="lbTitleText">Show Results Overlay</strong><br>
-          <small style="color: var(--subtext);">Manual toggle — stays on-screen until switched off</small>
+          <small style="color: var(--subtext);">Triggers 10-second broadcast overlay timer</small>
         </div>
       </div>
     </div>
@@ -675,6 +676,7 @@
     const lbToggle = document.getElementById('lbToggle');
     if (toggle.checked && lbToggle.checked) {
       lbToggle.checked = false;
+      handleLeaderboardToggle();
     }
 
     if (timerIntervals[id]) {
@@ -741,6 +743,7 @@
     const lbToggle = document.getElementById('lbToggle');
     if (toggle.checked && lbToggle.checked) {
       lbToggle.checked = false;
+      handleLeaderboardToggle();
     }
 
     if (timerIntervals[id]) {
@@ -836,6 +839,13 @@
 
   function handleLeaderboardToggle() {
     const toggle = document.getElementById('lbToggle');
+    const timerBar = document.getElementById('bar-leaderboard');
+    const timerKey = 'leaderboard';
+
+    if (timerIntervals[timerKey]) {
+      clearInterval(timerIntervals[timerKey]);
+      timerBar.style.width = '0%';
+    }
 
     if (toggle.checked) {
       const selectedHeader = document.getElementById('classSelect').value;
@@ -848,6 +858,27 @@
           payload: sorted
         }));
       }
+
+      let elapsed = 0;
+      const totalTime = 10000;
+      const intervalTime = 100;
+
+      timerIntervals[timerKey] = setInterval(() => {
+        elapsed += intervalTime;
+        const percentage = (elapsed / totalTime) * 100;
+        timerBar.style.width = `${percentage}%`;
+
+        if (elapsed >= totalTime) {
+          clearInterval(timerIntervals[timerKey]);
+          toggle.checked = false;
+          timerBar.style.width = '0%';
+          
+          if (client && client.connected) {
+            client.publish(topic, JSON.stringify({ type: 'HIDE_LEADERBOARD' }));
+          }
+        }
+      }, intervalTime);
+
     } else {
       if (client && client.connected) {
         client.publish(topic, JSON.stringify({ type: 'HIDE_LEADERBOARD' }));
