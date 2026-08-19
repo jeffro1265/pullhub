@@ -216,7 +216,7 @@
     </div>
   </div>
 
-  <!-- Section 0: Event Information & Announcers -->
+  <!-- Event Information & Announcers -->
   <div class="grid-2col">
     <!-- Event Info Panel -->
     <div class="card">
@@ -256,7 +256,7 @@
   </div>
 
   <div class="card">
-    <h3>Panel 1: Import TSV Roster</h3>
+    <h3>Import TSV Roster</h3>
     <p><small style="color: var(--subtext);">Paste tab-separated columns from Excel/Google Sheets in this order:<br>
     <strong>Vehicle [TAB] Driver [TAB] Hometown [TAB] Class</strong></small></p>
     <textarea id="tsvInput" placeholder="Iron Maiden	John Doe	Des Moines, IA	Super Stock"></textarea>
@@ -267,7 +267,7 @@
   </div>
 
   <div class="card">
-    <h3>Panel 2: Live Overlay Controls</h3>
+    <h3>Live Overlay Controls</h3>
     <div id="pullerList"><i>No participants imported. Paste TSV data above to load roster.</i></div>
     <div style="margin-top: 15px;">
       <button onclick="addManualParticipant()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px;">
@@ -277,7 +277,7 @@
   </div>
 
   <div class="card">
-    <h3>Panel 3: Results Header & Standings</h3>
+    <h3>Results Header & Standings</h3>
 
     <div class="class-selector-box">
       <label for="classSelect" style="white-space: nowrap;"><strong>Header Class Label:</strong></label>
@@ -300,7 +300,7 @@
     <!-- Manual Leaderboard TSV Bypass Area -->
     <div class="override-box">
       <label style="display: block; margin-bottom: 6px;">
-        <strong>Manual Leaderboard TSV Bypass (Overrides Panel 2)</strong>
+        <strong>Manual Leaderboard TSV Bypass (Overrides Live Controls)</strong>
         <span id="overrideBadge" class="override-badge" style="display: none;">ACTIVE</span>
       </label>
       <p><small style="color: var(--subtext);">Paste tab-separated columns in this exact order: <strong>Distance [TAB] Vehicle [TAB] Driver</strong></small></p>
