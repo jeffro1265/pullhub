@@ -248,9 +248,7 @@
     </div>
   </div>
 
-  <!-- Event Information & Announcers -->
   <div class="grid-2col">
-    <!-- Event Info Panel -->
     <div class="card">
       <h3>Event Information</h3>
       <div class="info-row" id="row-evt-info">
@@ -268,7 +266,6 @@
       </div>
     </div>
 
-    <!-- Announcer Info Panel -->
     <div class="card">
       <h3>Announcer Info</h3>
       <div class="info-row" id="row-ann-info">
@@ -329,7 +326,6 @@
       <button onclick="addCustomClass()" style="white-space: nowrap; flex-shrink: 0;">+ Custom Class</button>
     </div>
 
-    <!-- Manual Leaderboard TSV Bypass Area -->
     <div class="override-box">
       <label style="display: block; margin-bottom: 6px;">
         <strong>Manual Leaderboard TSV Bypass (Overrides Live Controls)</strong>
@@ -352,7 +348,7 @@
         </label>
         <div>
           <strong id="lbTitleText">Show Results Overlay</strong><br>
-          <small style="color: var(--subtext);">Triggers 10-second broadcast overlay timer</small>
+          <small style="color: var(--subtext);">Triggers 20-second broadcast overlay timer</small>
         </div>
       </div>
     </div>
@@ -380,7 +376,6 @@
 
 </div>
 
-<!-- Header Class Confirmation Modal -->
 <div id="confirmModal" class="modal-overlay" style="display: none;">
   <div class="modal-box">
     <h4>Confirm Results Header Label</h4>
@@ -755,7 +750,7 @@
       }
 
       let elapsed = 0;
-      const totalTime = 10000;
+      const totalTime = 20000;
       const intervalTime = 100;
 
       timerIntervals[id] = setInterval(() => {
@@ -882,19 +877,16 @@
     }
   }
 
-  /* Handles initial toggle click & prompts confirmation if enabling */
   function handleLeaderboardToggleClick(event) {
     const toggle = document.getElementById('lbToggle');
     
     if (toggle.checked) {
-      // Temporarily revert switch state until user confirms
       toggle.checked = false;
       
       const selectedHeader = document.getElementById('classSelect').value;
       document.getElementById('modalClassName').innerText = selectedHeader;
       document.getElementById('confirmModal').style.display = 'flex';
     } else {
-      // User turned off switch directly
       handleLeaderboardToggleState(false);
     }
   }
@@ -935,7 +927,7 @@
       }
 
       let elapsed = 0;
-      const totalTime = 10000;
+      const totalTime = 20000;
       const intervalTime = 100;
 
       timerIntervals[timerKey] = setInterval(() => {
