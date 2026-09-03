@@ -2,573 +2,337 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pulling Broadcast Overlay</title>
+  <title>OBS Broadcast Overlay</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    :root {
-      --primary: #0a1936;
-      --accent: #ffffff;
-      --dark: #121212;
-      --panel-bg: linear-gradient(180deg, rgba(31, 87, 184, 0.96) 0%, rgba(11, 35, 84, 0.98) 100%);
-      --text: #ffffff;
-      --subtext: #ffffff;
-    }
-
     body {
       margin: 0;
       padding: 0;
-      width: 100vw;
-      height: 100vh;
       overflow: hidden;
-      background-color: transparent;
+      background: transparent;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      box-sizing: border-box;
     }
 
-    /* Centered & 200% Scaled Lower Third Container */
-    .lower-third-container {
+    /* Dynamic Lower Third Banner */
+    #lower-third {
       position: absolute;
-      bottom: 120px;
+      bottom: 50px;
       left: 50%;
-      transform: translate(-50%, 30px) scale(2);
-      transform-origin: center bottom;
-      display: flex;
-      align-items: stretch;
-      opacity: 0;
-      transition: opacity 0.5s ease, transform 0.5s ease;
-    }
-    .lower-third-container.visible {
-      opacity: 1;
-      transform: translate(-50%, 0) scale(2);
-    }
-
-    .lt-content {
-      background: var(--panel-bg);
-      padding: 14px 28px;
+      
+      width: max-content;
+      max-width: 85vw;
+      box-sizing: border-box;
+      
+      padding: 18px 36px;
+      background: linear-gradient(to bottom, #35558F, #1c3054);
+      border: 3px solid rgba(255, 255, 255, 0.25);
       border-radius: 12px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
-      min-width: 420px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-
-    .lt-left-group {
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+      
       display: flex;
       align-items: center;
-      gap: 18px;
+      gap: 26px;
+
+      opacity: 0;
+      transform: translate(-50%, 60px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .lt-logo {
-      height: 64px;
+    #lower-third.visible {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .logo-container {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-container img {
+      height: 105px;
       width: auto;
       object-fit: contain;
+      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
     }
 
-    .lt-info { display: flex; flex-direction: column; }
-    
-    .lt-vehicle {
-      font-size: 34px;
-      font-weight: 800;
-      color: #ffffff;
-      letter-spacing: 0.5px;
-      line-height: 1.1;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-    }
-
-    .lt-driver-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .lt-driver,
-    .lt-hometown {
-      font-size: 18px;
-      font-weight: 600;
-      color: #ffffff;
-      opacity: 0.9;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-    }
-
-    .lt-separator {
-      font-size: 18px;
-      color: #ffffff;
-      opacity: 0.6;
-    }
-
-    .lt-right-group {
+    .info-container {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 6px;
+      gap: 4px;
+      overflow: hidden;
+      min-width: 0;
     }
 
-    .lt-distance-box {
-      background: var(--primary);
-      padding: 8px 20px;
-      border-radius: 6px;
-      text-align: center;
-      display: flex;
-      flex-direction: row;
-      justify-content: center;
-      align-items: baseline;
-      gap: 6px;
-      min-width: 115px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
-    }
-
-    .lt-distance-val {
-      font-size: 31px;
+    .vehicle-info {
+      font-size: 45px;
       font-weight: 900;
       color: #ffffff;
-      line-height: 1;
-    }
-
-    .lt-distance-unit {
-      font-size: 16px;
-      font-weight: 800;
-      color: #ffffff;
+      text-transform: uppercase;
       letter-spacing: 1px;
-    }
-    
-    .puller-rank {
-      font-size: 14px;
-      font-weight: 800;
-      color: #ffffff;
-      background: var(--primary);
-      padding: 4px 10px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-      width: 100%;
-      box-sizing: border-box;
-      text-align: center;
-    }
-
-    /* Results Overlay Container */
-    .leaderboard-container {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.95);
-      background: rgba(10, 25, 54, 0.90);
-      backdrop-filter: blur(18px);
-      box-sizing: border-box;
-      padding: 24px 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
-      opacity: 0;
-      transition: opacity 0.5s ease, transform 0.5s ease, width 0.4s ease;
-      pointer-events: none;
-      z-index: 100;
-      width: 52vw; /* Expanded slightly for side-by-side text layout */
-      height: 94vh;
-      max-height: 94vh;
-    }
-
-    .leaderboard-container.two-columns {
-      width: 92vw;
-    }
-
-    .leaderboard-container.visible {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-      pointer-events: auto;
-    }
-
-    /* Header Card */
-    .lb-header-card {
-      background: var(--panel-bg);
-      border-radius: 12px;
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    .lb-header-logo-left {
-      position: absolute;
-      left: 20px;
-      height: 58px;
-      width: auto;
-    }
-
-    .lb-header-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .lb-header-title {
-      font-size: 36px;
-      font-weight: 900;
-      color: #ffffff;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      text-shadow: 0 3px 6px rgba(0,0,0,0.6);
-      margin: 0;
-      line-height: 1.15;
-    }
-
-    .lb-header-subtitle {
-      font-size: 18px;
-      font-weight: 700;
-      color: rgba(255, 255, 255, 0.85);
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
-      margin-top: 2px;
-    }
-
-    /* Flexible Grid List Container */
-    .lb-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: grid;
-      grid-template-columns: 1fr;
-      grid-template-rows: repeat(10, 1fr);
-      grid-auto-flow: column;
-      gap: 12px 20px;
-      flex-grow: 1;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    .leaderboard-container.two-columns .lb-list {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    /* Individual Result Rows */
-    .lb-item {
-      background: var(--panel-bg);
-      border-radius: 8px;
-      padding: 12px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-      box-sizing: border-box;
-      height: 100%;
-    }
-
-    .lb-left-group {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      overflow: hidden;
-    }
-
-    .lb-rank-badge {
-      background: var(--primary);
-      color: #ffffff;
-      font-size: 23px;
-      font-weight: 900;
-      width: 46px;
-      height: 46px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
-      flex-shrink: 0;
-    }
-
-    /* Single Inline Row Container for Vehicle + Driver + Hometown */
-    .lb-inline-info {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
+      line-height: 1.1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      text-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
     }
 
-    .lb-vehicle-name {
-      font-size: 25px;
-      font-weight: 800;
+    .driver-info {
+      font-size: 27px;
+      font-weight: 600;
       color: #ffffff;
-      letter-spacing: 0.5px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-    }
-
-    .lb-driver-name,
-    .lb-hometown {
-      font-size: 20px;
-      font-weight: 700;
-      color: #ffffff;
-      opacity: 0.9;
       text-transform: uppercase;
       letter-spacing: 0.8px;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      opacity: 0.95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
     }
 
-    .lb-inline-separator {
-      font-size: 20px;
-      color: #ffffff;
-      opacity: 0.5;
-    }
-
-    .lb-dist-box {
-      background: var(--primary);
-      padding: 8px 18px;
-      border-radius: 6px;
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
-      flex-shrink: 0;
-    }
-
-    .lb-dist-val {
-      font-size: 26px;
-      font-weight: 900;
-      color: #ffffff;
-      line-height: 1;
-    }
-
-    .lb-dist-unit {
-      font-size: 14px;
+    .distance-tag {
+      font-size: 45px;
       font-weight: 800;
       color: #ffffff;
-      letter-spacing: 1px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      text-align: center;
+      letter-spacing: 1.5px;
+      display: none;
+      flex-shrink: 0;
+      box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Dynamic Centered Results Board */
+    #leaderboard {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      
+      width: fit-content;
+      min-width: 650px;
+      max-width: 90vw;
+      
+      background: linear-gradient(to bottom, #35558F, #1c3054);
+      border-radius: 12px;
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+      overflow: hidden;
+      opacity: 0;
+      transform: translate(-50%, -40%);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #leaderboard.visible {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+
+    .lb-header {
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .lb-header img {
+      height: 70px;
+      width: auto;
+      object-fit: contain;
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    }
+
+    .lb-header-text {
+      font-size: clamp(22px, 3.2vw, 36px);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      line-height: 1.1;
+      white-space: nowrap;
+      flex-grow: 1;
+    }
+
+    .lb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 30px;
+      padding: 14px 28px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .lb-row:last-child {
+      border-bottom: none;
+    }
+
+    .lb-rank {
+      font-size: 28px;
+      font-weight: 900;
+      color: #ffffff;
+      width: 45px;
+      flex-shrink: 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .lb-details {
+      flex-grow: 1;
+      white-space: nowrap;
+    }
+
+    .lb-vehicle {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .lb-driver {
+      font-size: 16px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .lb-distance {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
   </style>
 </head>
 <body>
 
-  <!-- Participant Lower Third Overlay -->
-  <div id="lowerThird" class="lower-third-container">
-    <div class="lt-content">
-      <div class="lt-left-group">
-        <img src="logo.png" alt="Logo" class="lt-logo" id="overlayLogo">
-        <div class="lt-info">
-          <div id="pullerVehicle" class="lt-vehicle"></div>
-          <div class="lt-driver-row">
-            <span id="pullerDriver" class="lt-driver"></span>
-            <span id="ltSeparator" class="lt-separator" style="display: none;">•</span>
-            <span id="pullerHometown" class="lt-hometown"></span>
-          </div>
-        </div>
-      </div>
-      <div id="rightGroup" class="lt-right-group" style="display: none;">
-        <div class="lt-distance-box">
-          <span id="pullerDistance" class="lt-distance-val"></span>
-          <span class="lt-distance-unit">FT</span>
-        </div>
-        <div id="pullerRank" class="puller-rank" style="display: none;"></div>
-      </div>
+  <!-- Dynamic Centered Lower Third Banner -->
+  <div id="lower-third">
+    <div class="logo-container">
+      <img src="logo.png" alt="OSTPA Logo">
     </div>
+    <div class="info-container">
+      <div class="vehicle-info" id="vehicleName">"VEHICLE NAME"</div>
+      <div class="driver-info" id="driverDetails">DRIVER NAME</div>
+    </div>
+    <div class="distance-tag" id="distance"></div>
   </div>
 
-  <!-- Vertically Filling Results Overlay -->
-  <div id="leaderboard" class="leaderboard-container">
-    <div class="lb-header-card">
-      <img src="logo.png" alt="Logo" class="lb-header-logo-left">
-      <div class="lb-header-content">
-        <h1 id="lbHeaderTitle" class="lb-header-title">OFFICIAL RESULTS</h1>
-        <div id="lbHeaderSubtitle" class="lb-header-subtitle">CLASS STANDINGS</div>
-      </div>
+  <!-- Dynamic Centered Results Board -->
+  <div id="leaderboard">
+    <div class="lb-header">
+      <img src="logo.png" alt="OSTPA Logo">
+      <div class="lb-header-text" id="lbTitle">TOP 5 RESULTS</div>
     </div>
-    <ul id="lbList" class="lb-list"></ul>
+    <div id="lb-rows"></div>
   </div>
 
-<script>
-  let client = null;
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const channelName = urlParams.get('channel') || 'pulling_event_default_channel';
+    const topic = `smog_media_pulling/${channelName}/control`;
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const channelKey = urlParams.get('channel') || 'pulling_event_default_channel';
-  const topic = `smog_media_pulling/${channelKey}/control`;
+    const lowerThird = document.getElementById('lower-third');
+    const leaderboard = document.getElementById('leaderboard');
+    const distanceEl = document.getElementById('distance');
 
-  function getOrdinalSuffix(i) {
-    const j = i % 10, k = i % 100;
-    if (j === 1 && k !== 11) return i + "st";
-    if (j === 2 && k !== 12) return i + "nd";
-    if (j === 3 && k !== 13) return i + "rd";
-    return i + "th";
-  }
-
-  function connectMQTT() {
-    client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-      clientId: 'ovl_' + Math.random().toString(16).substr(2, 8)
+    const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+      clientId: 'obs_overlay_' + Math.random().toString(16).substr(2, 8)
     });
 
     client.on('connect', () => {
-      console.log(`Overlay connected to channel: ${channelKey}`);
       client.subscribe(topic);
     });
 
     client.on('message', (t, message) => {
       try {
         const data = JSON.parse(message.toString());
-        handleBroadcastEvent(data);
-      } catch (e) {
-        console.error("Error parsing MQTT payload:", e);
-      }
-    });
-  }
+        const { type, payload, visible, classHeader } = data;
 
-  function handleBroadcastEvent(data) {
-    switch (data.type) {
-      case 'UPDATE_PULLER':
-        renderLowerThird(data.payload);
-        break;
-      case 'TOGGLE_VISIBILITY':
-        setLowerThirdVisible(data.visible);
-        break;
-      case 'UPDATE_LEADERBOARD':
-        renderLeaderboard(data.classHeader, data.payload);
-        setLeaderboardVisible(true);
-        break;
-      case 'HIDE_LEADERBOARD':
-        setLeaderboardVisible(false);
-        break;
-    }
-  }
+        if (type === 'UPDATE_PULLER') {
+          leaderboard.classList.remove('visible');
 
-  function renderLowerThird(payload) {
-    document.getElementById('pullerVehicle').innerText = payload.vehicle ? `"${payload.vehicle}"` : '';
-    document.getElementById('pullerDriver').innerText = payload.driver ? payload.driver : '';
-    
-    const hometownEl = document.getElementById('pullerHometown');
-    const separatorEl = document.getElementById('ltSeparator');
-    
-    if (payload.hometown && payload.hometown.trim() !== '') {
-      hometownEl.innerText = payload.hometown;
-      hometownEl.style.display = 'inline';
-      separatorEl.style.display = payload.driver ? 'inline' : 'none';
-    } else {
-      hometownEl.style.display = 'none';
-      separatorEl.style.display = 'none';
-    }
+          const vName = payload.vehicle ? payload.vehicle.toUpperCase() : '';
+          document.getElementById('vehicleName').innerText = vName ? `"${vName}"` : '';
 
-    const rightGroup = document.getElementById('rightGroup');
-    const distVal = document.getElementById('pullerDistance');
-    const rankVal = document.getElementById('pullerRank');
-
-    const numDist = parseFloat(payload.distance);
-
-    if (payload.distance !== null && payload.distance !== undefined && payload.distance !== '' && !isNaN(numDist) && numDist > 0) {
-      distVal.innerText = typeof payload.distance === 'number' ? payload.distance.toFixed(2) : payload.distance;
-      
-      let currentRank = payload.rank || payload.place;
-
-      if (!currentRank) {
-        try {
-          const savedPullersRaw = localStorage.getItem('smog_pullers_data_v1');
-          if (savedPullersRaw) {
-            const allPullers = JSON.parse(savedPullersRaw);
-            const sortedDistances = allPullers
-              .map(p => parseFloat(p.distance))
-              .filter(d => !isNaN(d) && d > 0)
-              .sort((a, b) => b - a);
-
-            const rankIndex = sortedDistances.indexOf(numDist);
-            if (rankIndex !== -1) {
-              currentRank = rankIndex + 1;
-            }
+          let driverText = payload.driver ? payload.driver.toUpperCase() : '';
+          if (payload.hometown) {
+            driverText += ` — ${payload.hometown.toUpperCase()}`;
           }
-        } catch(e) {
-          console.warn("Storage access restricted:", e);
+          document.getElementById('driverDetails').innerText = driverText;
+
+          const distVal = payload.distance !== null && payload.distance !== undefined ? String(payload.distance).trim() : '';
+          
+          if (distVal !== '' && distVal !== '0') {
+            distanceEl.innerText = `${distVal} FT`;
+            distanceEl.style.display = 'block';
+          } else {
+            distanceEl.innerText = '';
+            distanceEl.style.display = 'none';
+          }
         }
+
+        if (type === 'TOGGLE_VISIBILITY') {
+          if (visible) {
+            leaderboard.classList.remove('visible');
+            lowerThird.classList.add('visible');
+          } else {
+            lowerThird.classList.remove('visible');
+          }
+        }
+
+        if (type === 'UPDATE_LEADERBOARD') {
+          lowerThird.classList.remove('visible');
+          
+          const lbTitle = document.getElementById('lbTitle');
+          const headerLabel = classHeader ? classHeader.toUpperCase().trim() : 'TOP 5';
+          lbTitle.innerText = `${headerLabel} RESULTS`;
+
+          const lbRows = document.getElementById('lb-rows');
+          lbRows.innerHTML = '';
+
+          payload.forEach((p, idx) => {
+            const distNum = parseFloat(p.distance);
+            const distDisplay = isNaN(distNum) ? p.distance : distNum.toFixed(2);
+            
+            const row = document.createElement('div');
+            row.className = 'lb-row';
+            row.innerHTML = `
+              <div class="lb-rank">#${idx + 1}</div>
+              <div class="lb-details">
+                <div class="lb-vehicle">"${p.vehicle.toUpperCase()}"</div>
+                <div class="lb-driver">${p.driver.toUpperCase()}</div>
+              </div>
+              <div class="lb-distance">${distDisplay} FT</div>
+            `;
+            lbRows.appendChild(row);
+          });
+
+          leaderboard.classList.add('visible');
+        }
+
+        if (type === 'HIDE_LEADERBOARD') {
+          leaderboard.classList.remove('visible');
+        }
+
+      } catch (e) {
+        console.error("Failed to parse incoming WS message:", e);
       }
-
-      if (currentRank) {
-        const parsedRank = parseInt(currentRank, 10);
-        rankVal.innerText = !isNaN(parsedRank) ? `${getOrdinalSuffix(parsedRank)} Place` : `${currentRank} Place`;
-        rankVal.style.display = 'block';
-      } else {
-        rankVal.style.display = 'none';
-      }
-
-      rightGroup.style.display = 'flex';
-    } else {
-      rightGroup.style.display = 'none';
-      rankVal.style.display = 'none';
-    }
-  }
-
-  function setLowerThirdVisible(visible) {
-    const el = document.getElementById('lowerThird');
-    if (visible) el.classList.add('visible');
-    else el.classList.remove('visible');
-  }
-
-  function renderLeaderboard(headerTitle, items) {
-    document.getElementById('lbHeaderTitle').innerText = headerTitle ? headerTitle : 'OFFICIAL RESULTS';
-    const container = document.getElementById('leaderboard');
-    const list = document.getElementById('lbList');
-    list.innerHTML = '';
-
-    if (!items || items.length === 0) return;
-
-    if (items.length > 10) {
-      container.classList.add('two-columns');
-    } else {
-      container.classList.remove('two-columns');
-    }
-
-    items.forEach((item, idx) => {
-      const li = document.createElement('li');
-      li.className = 'lb-item';
-      const formattedDist = typeof item.distance === 'number' ? item.distance.toFixed(2) : item.distance;
-      
-      const driverHtml = item.driver 
-        ? `<span class="lb-inline-separator">•</span><span class="lb-driver-name">${item.driver}</span>` 
-        : '';
-        
-      const hometownHtml = item.hometown 
-        ? `<span class="lb-inline-separator">•</span><span class="lb-hometown">${item.hometown}</span>` 
-        : '';
-
-      li.innerHTML = `
-        <div class="lb-left-group">
-          <div class="lb-rank-badge">#${idx + 1}</div>
-          <div class="lb-inline-info">
-            <span class="lb-vehicle-name">"${item.vehicle}"</span>
-            ${driverHtml}
-            ${hometownHtml}
-          </div>
-        </div>
-        <div class="lb-dist-box">
-          <span class="lb-dist-val">${formattedDist}</span>
-          <span class="lb-dist-unit">FT</span>
-        </div>
-      `;
-      list.appendChild(li);
     });
-  }
-
-  function setLeaderboardVisible(visible) {
-    const el = document.getElementById('leaderboard');
-    if (visible) el.classList.add('visible');
-    else el.classList.remove('visible');
-  }
-
-  connectMQTT();
-</script>
-
+  </script>
 </body>
 </html>
